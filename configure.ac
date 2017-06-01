@@ -108,6 +108,11 @@ AC_ARG_ENABLE([werror],
     [enable_werror=$enableval],
     [enable_werror=no])
 
+AC_ARG_ENABLE(tests,
+    AS_HELP_STRING([--disable-tests],[do not compile tests (default is to compile)]),
+    [use_tests=$enableval],
+    [use_tests=yes])
+
 AC_LANG_PUSH([C++])
 AX_CHECK_COMPILE_FLAG([-Werror],[CXXFLAG_WERROR="-Werror"],[CXXFLAG_WERROR=""])
 
@@ -147,6 +152,12 @@ if test "x$CXXFLAGS_overridden" = "xno"; then
 fi
 CPPFLAGS="$CPPFLAGS -DHAVE_BUILD_INFO -D__STDC_FORMAT_MACROS"
 
+AC_ARG_WITH([hidapi],
+  [AS_HELP_STRING([--with-hidapi],
+  [build libdbb with internal hidapi support (default=yes)])],
+  [build_hidapi=$withval],
+  [build_hidapi=yes])
+  
 use_pkgconfig=yes
 case $host in
   *mingw*)
@@ -226,9 +237,11 @@ case $host in
      LEVELDB_TARGET_FLAGS="-DOS_LINUX"
      ;;
    *freebsd*)
+     TARGET_OS=linux
      LEVELDB_TARGET_FLAGS="-DOS_FREEBSD"
      ;;
    *openbsd*)
+     TARGET_OS=linux
      LEVELDB_TARGET_FLAGS="-DOS_OPENBSD"
      ;;
    *)
@@ -481,9 +494,10 @@ else
   AC_MSG_RESULT([no])
 fi
 
-AM_CONDITIONAL([TARGET_DARWIN], [test x$TARGET_OS = xdarwin])
-AM_CONDITIONAL([BUILD_DARWIN], [test x$BUILD_OS = xdarwin])
+AM_CONDITIONAL([TARGET_OSX], [test x$TARGET_OS = xdarwin])
+AM_CONDITIONAL([BUILD_OSX], [test x$BUILD_OS = xdarwin])
 AM_CONDITIONAL([TARGET_WINDOWS], [test x$TARGET_OS = xwindows])
+AM_CONDITIONAL([TARGET_LINUX], [test x$TARGET_OS = xlinux])
 AM_CONDITIONAL([ENABLE_TESTS],[test x$BUILD_TEST = xyes])
 AM_CONDITIONAL([USE_LCOV],[test x$use_lcov = xyes])
 AM_CONDITIONAL([GLIBC_BACK_COMPAT],[test x$use_glibc_compat = xyes])
@@ -570,8 +584,13 @@ case ${OS} in
    ;;
 esac
 
+AC_MSG_CHECKING([whether to build with libhidapi support])
+AM_CONDITIONAL([BUILD_HIDAPI], [test x$build_hidapi = xyes])
+AC_MSG_RESULT($build_hidapi)
+
 echo 
 echo "Options used to compile and link:"
+echo "  with hidapi   = $build_hidapi"
 echo "  with test     = $use_tests"
 echo "  debug enabled = $enable_debug"
 echo "  werror        = $enable_werror"
