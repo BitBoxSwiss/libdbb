@@ -1,0 +1,87 @@
+*.tar.gz
+*.exe
+src/dbb-cli
+src/dbb-app
+
+# autoreconf
+Makefile.in
+aclocal.m4
+autom4te.cache/
+build-aux/config.guess
+build-aux/config.sub
+build-aux/depcomp
+build-aux/install-sh
+build-aux/ltmain.sh
+build-aux/m4/libtool.m4
+build-aux/m4/lt~obsolete.m4
+build-aux/m4/ltoptions.m4
+build-aux/m4/ltsugar.m4
+build-aux/m4/ltversion.m4
+build-aux/missing
+build-aux/compile
+build-aux/test-driver
+config.log
+config.status
+configure
+libtool
+src/config/stamp-h1
+compile
+depcomp
+missing
+install-sh
+config.sub
+config.guess
+
+.deps
+.dirstamp
+.libs
+.*.swp
+*.*~*
+*.bak
+*.rej
+*.orig
+*.pyc
+*.o
+*.o-*
+*.patch
+.bitcoin
+*.a
+*.pb.cc
+*.pb.h
+
+*.log
+*.trs
+*.dmg
+
+*.json.h
+*.raw.h
+
+#libtool object files
+*.lo
+*.la
+
+# Compilation and Qt preprocessor part
+Makefile
+bitcoin-qt
+
+# Unit-tests
+Makefile.test
+
+# Mac specific
+.DS_Store
+src/config/*.in
+
+src/qt/*.moc
+src/qt/moc_*.cpp
+src/qt/ui/ui_*.h
+src/qt/qrc_*.cpp
+
+# QT Creator
+*.autosave
+
+# VIM specific
+*.swo
+*.swp
+/src/config/libdbb-config.h
+/src/test
+/src/hidapi/ar-lib
