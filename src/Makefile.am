@@ -30,7 +30,7 @@ endif
 
 $(HIDAPI):
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
-	
+
 HIDAPI_INCLUDES = -I$(srcdir)/hidapi
 
 LIBDBB_INCLUDES = $(HIDAPI_INCLUDES) $(UNIVALUE_INCLUDES)
@@ -46,9 +46,30 @@ TESTS =
 LIBDBB=libdbb.la
   
 LIBDBB_H = \
-  dbb.h
+  compat/byteswap.h \
+  compat/endian.h \
+  compat.h \
+  crypto/aes.h \
+  crypto/chacha20.h \
+  crypto/common.h \
+  crypto/random.h \
+  crypto/sha512.h \
+  dbb.h \
+  support/cleanse.h \
+  uint256.h \
+  utilstrencodings.h
 
-libdbb_la_SOURCES =  dbb.cpp $(LIBDBB_H) $(CTAES)
+libdbb_la_SOURCES = \
+  crypto/aes.cpp \
+  crypto/chacha20.cpp \
+  crypto/random.cpp \
+  crypto/sha512.cpp \
+  dbb.cpp \
+  support/cleanse.cpp \
+  utilstrencodings.cpp \
+  uint256.cpp \
+  $(LIBDBB_H) \
+  $(CTAES)
   
 libdbb_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined $(RELDFLAGS)
 libdbb_la_LIBADD = $(HIDAPI) $(LIBUNIVALUE)
@@ -59,8 +80,9 @@ lib_LTLIBRARIES = $(LIBDBB)
 
 if ENABLE_TESTS
   bin_PROGRAMS += test
-  test_SOURCES = test.cpp $(LIBDBB)
+  test_SOURCES = test.cpp
   test_CPPFLAGS = $(AM_CPPFLAGS) $(LIBDBB_INCLUDES)
+  test_LDADD = $(LIBDBB)
 endif
 
 clean-local:
