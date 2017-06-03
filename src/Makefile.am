@@ -9,17 +9,12 @@ AM_CXXFLAGS = $(HARDENED_CXXFLAGS) $(ERROR_CXXFLAGS)
 AM_CPPFLAGS = $(HARDENED_CPPFLAGS)
 EXTRA_LIBRARIES =
 
-#if EMBEDDED_UNIVALUE
+
 LIBUNIVALUE = univalue/libunivalue.la
-#
 $(LIBUNIVALUE): $(wildcard univalue/lib/*) $(wildcard univalue/include/*)
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
-#else
-#LIBUNIVALUE = $(UNIVALUE_LIBS)
-#endif
 
-#$(UNIVALUE): $(wildcard univalue/lib/*) $(wildcard univalue/include/*)
-#	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
+UNIVALUE_INCLUDES = -I$(srcdir)/univalue/include
 
 if TARGET_WINDOWS
   HIDAPI=hidapi/windows/libhidapi.la
@@ -38,6 +33,12 @@ $(HIDAPI):
 	
 HIDAPI_INCLUDES = -I$(srcdir)/hidapi
 
+LIBDBB_INCLUDES = $(HIDAPI_INCLUDES) $(UNIVALUE_INCLUDES)
+
+CTAES = \
+  crypto/ctaes/ctaes.c \
+  crypto/ctaes/ctaes.h
+
 bin_PROGRAMS =
 noinst_PROGRAMS =
 TESTS =
@@ -47,11 +48,11 @@ LIBDBB=libdbb.la
 LIBDBB_H = \
   dbb.h
 
-libdbb_la_SOURCES = dbb.cpp $(LIBDBB_H)
+libdbb_la_SOURCES =  dbb.cpp $(LIBDBB_H) $(CTAES)
   
 libdbb_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined $(RELDFLAGS)
 libdbb_la_LIBADD = $(HIDAPI) $(LIBUNIVALUE)
-libdbb_la_CPPFLAGS = $(AM_CPPFLAGS)
+libdbb_la_CPPFLAGS = $(AM_CPPFLAGS) $(LIBDBB_INCLUDES)
 libdbb_la_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 
 lib_LTLIBRARIES = $(LIBDBB)
@@ -59,6 +60,7 @@ lib_LTLIBRARIES = $(LIBDBB)
 if ENABLE_TESTS
   bin_PROGRAMS += test
   test_SOURCES = test.cpp $(LIBDBB)
+  test_CPPFLAGS = $(AM_CPPFLAGS) $(LIBDBB_INCLUDES)
 endif
 
 clean-local:
