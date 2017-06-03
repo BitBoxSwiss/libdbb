@@ -83,5 +83,5 @@ src/qt/qrc_*.cpp
 *.swo
 *.swp
 /src/config/libdbb-config.h
-/src/test
 /src/hidapi/ar-lib
+/src/tests

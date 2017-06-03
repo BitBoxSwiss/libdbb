@@ -35,9 +35,11 @@ HIDAPI_INCLUDES = -I$(srcdir)/hidapi
 
 LIBDBB_INCLUDES = $(HIDAPI_INCLUDES) $(UNIVALUE_INCLUDES)
 
-CTAES = \
+CTAES_DIST = \
   crypto/ctaes/ctaes.c \
   crypto/ctaes/ctaes.h
+
+EXTRA_DIST = $(CTAES_DIST)
 
 bin_PROGRAMS =
 noinst_PROGRAMS =
@@ -68,8 +70,7 @@ libdbb_la_SOURCES = \
   support/cleanse.cpp \
   utilstrencodings.cpp \
   uint256.cpp \
-  $(LIBDBB_H) \
-  $(CTAES)
+  $(LIBDBB_H)
   
 libdbb_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined $(RELDFLAGS)
 libdbb_la_LIBADD = $(HIDAPI) $(LIBUNIVALUE)
@@ -79,10 +80,10 @@ libdbb_la_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 lib_LTLIBRARIES = $(LIBDBB)
 
 if ENABLE_TESTS
-  bin_PROGRAMS += test
-  test_SOURCES = test.cpp
-  test_CPPFLAGS = $(AM_CPPFLAGS) $(LIBDBB_INCLUDES)
-  test_LDADD = $(LIBDBB)
+  bin_PROGRAMS += tests
+  tests_SOURCES = test/test.cpp
+  tests_CPPFLAGS = $(AM_CPPFLAGS) $(LIBDBB_INCLUDES)
+  tests_LDADD = $(LIBDBB)
 endif
 
 clean-local:
