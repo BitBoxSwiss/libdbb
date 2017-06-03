@@ -60,3 +60,7 @@ if ENABLE_TESTS
   bin_PROGRAMS += test
   test_SOURCES = test.cpp $(LIBDBB)
 endif
+
+clean-local:
+	-$(MAKE) -C hidapi clean
+	-$(MAKE) -C univalue clean
