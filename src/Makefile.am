@@ -2,18 +2,18 @@
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-DIST_SUBDIRS = hidapi
+DIST_SUBDIRS = hidapi univalue
 
-AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) $(HARDENED_LDFLAGS)
+AM_LDFLAGS = $(LIBTOOL_LDFLAGS) $(HARDENED_LDFLAGS)
 AM_CXXFLAGS = $(HARDENED_CXXFLAGS) $(ERROR_CXXFLAGS)
 AM_CPPFLAGS = $(HARDENED_CPPFLAGS)
 EXTRA_LIBRARIES =
 
 #if EMBEDDED_UNIVALUE
-#LIBUNIVALUE = univalue/libunivalue.la
+LIBUNIVALUE = univalue/libunivalue.la
 #
-#$(LIBUNIVALUE): $(wildcard univalue/lib/*) $(wildcard univalue/include/*)
-#	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
+$(LIBUNIVALUE): $(wildcard univalue/lib/*) $(wildcard univalue/include/*)
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
 #else
 #LIBUNIVALUE = $(UNIVALUE_LIBS)
 #endif
@@ -50,7 +50,7 @@ LIBDBB_H = \
 libdbb_la_SOURCES = dbb.cpp $(LIBDBB_H)
   
 libdbb_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined $(RELDFLAGS)
-libdbb_la_LIBADD = $(HIDAPI)
+libdbb_la_LIBADD = $(HIDAPI) $(LIBUNIVALUE)
 libdbb_la_CPPFLAGS = $(AM_CPPFLAGS)
 libdbb_la_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 

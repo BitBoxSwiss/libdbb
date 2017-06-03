@@ -284,9 +284,6 @@ fi
 dnl Check for endianness
 AC_C_BIGENDIAN
 
-dnl Check for pthread compile/link requirements
-AX_PTHREAD
-
 # The following macro will add the necessary defines to libdbb-config.h, but
 # they also need to be passed down to any subprojects. Pull the results out of
 # the cache and add them to CPPFLAGS.
@@ -556,12 +553,8 @@ PKGCONFIG_LIBDIR_TEMP="$PKG_CONFIG_LIBDIR"
 unset PKG_CONFIG_LIBDIR
 PKG_CONFIG_LIBDIR="$PKGCONFIG_LIBDIR_TEMP"
 
-if test x$need_bundled_univalue = xyes; then
-  AC_CONFIG_SUBDIRS([src/univalue])
-fi
-
 ac_configure_args="${ac_configure_args} --disable-shared --with-pic"
-AC_CONFIG_SUBDIRS([src/hidapi])
+AC_CONFIG_SUBDIRS([src/hidapi src/univalue])
 
 AC_OUTPUT
 
