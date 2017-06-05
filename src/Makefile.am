@@ -55,8 +55,10 @@ LIBDBB_H = \
   crypto/chacha20.h \
   crypto/common.h \
   crypto/random.h \
+  crypto/sha256.h \
   crypto/sha512.h \
   dbb.h \
+  dbb_hid.h \
   support/cleanse.h \
   uint256.h \
   utilstrencodings.h
@@ -65,8 +67,10 @@ libdbb_la_SOURCES = \
   crypto/aes.cpp \
   crypto/chacha20.cpp \
   crypto/random.cpp \
+  crypto/sha256.cpp \
   crypto/sha512.cpp \
   dbb.cpp \
+  dbb_hid.cpp \
   support/cleanse.cpp \
   utilstrencodings.cpp \
   uint256.cpp \
