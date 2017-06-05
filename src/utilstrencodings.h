@@ -10,6 +10,7 @@
 #define BITCOIN_UTILSTRENCODINGS_H
 
 #include <stdint.h>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -120,5 +121,22 @@ bool TimingResistantEqual(const T& a, const T& b)
     for (size_t i = 0; i < a.size(); i++)
         accumulator |= a[i] ^ b[i%b.size()];
     return accumulator == 0;
+}
+
+
+inline std::vector<std::string> &str_split(const std::string &s, char delim, std::vector<std::string> &elems) {
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
+}
+
+
+inline std::vector<std::string> str_split(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    str_split(s, delim, elems);
+    return elems;
 }
 #endif // BITCOIN_UTILSTRENCODINGS_H
