@@ -18,11 +18,6 @@
 #define HID_BL_BUF_SIZE_W 4098
 #define HID_BL_BUF_SIZE_R 256
 
-#define BACKUP_KEY_PBKDF2_SALT "Digital Bitbox"
-#define BACKUP_KEY_PBKDF2_SALTLEN 14
-#define BACKUP_KEY_PBKDF2_ROUNDS 20480
-#define BACKUP_KEY_PBKDF2_HMACLEN 64
-
 #define USB_REPORT_SIZE 64
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -73,7 +68,6 @@ static int api_hid_send_frame(hid_device* hid_handle, USB_FRAME* f)
     memcpy(d + 1, f, sizeof(USB_FRAME));
     f->cid = ntohl(f->cid);
 
-    //DBB_DEBUG_INTERNAL("send frame data %s\n", HexStr(d, d+sizeof(d)).c_str(), res);
     res = hid_write(hid_handle, d, sizeof(d));
 
     if (res == sizeof(d)) {
@@ -102,7 +96,6 @@ static int api_hid_send_frames(hid_device* hid_handle, uint32_t cid, uint8_t cmd
 
     do {
         res = api_hid_send_frame(hid_handle, &frame);
-        //DBB_DEBUG_INTERNAL("  send frame done, bytes: %d (result: %d)\n", frameLen, res);
         if (res != 0) {
             return res;
         }
@@ -154,7 +147,6 @@ static int api_hid_read_frames(hid_device* hid_handle, uint32_t cid, uint8_t cmd
     } while (frame.cid != cid || FRAME_TYPE(frame) != TYPE_INIT);
 
     if (frame.init.cmd == U2FHID_ERROR) {
-        //DBB_DEBUG_INTERNAL("reading error... U2FHID_ERROR\n", res);
         return -frame.init.data[0];
     }
 
@@ -401,8 +393,6 @@ bool DBBCommunicationInterfaceHID::sendBootloaderCmd(const uint16_t cmd, const s
     m_HIDReportBuffer[0] = 0x00;
 #endif
     memcpy(&m_HIDReportBuffer[0 + reportShift], &cmd, 2);
-    //m_HIDReportBuffer[0+reportShift] = 0x77;
-    //m_HIDReportBuffer[1+reportShift] = chunknum % 0xff;
     if (data.size()) {
         memcpy((void*)&m_HIDReportBuffer[2 + reportShift], (unsigned char*)&data[0], data.size());
     }
