@@ -20,7 +20,7 @@ void testAES() {
 }
 
 void testDBB() {
-    DBB dbb([](const DBBDeviceState state, const std::string pID) {
+    DBBDeviceManager dbb([](const DBBDeviceState state, const std::string pID) {
         printf("Device state: %d\n", state);
     });
     std::string commandJson0 = "{\"led\" : \"blink\"}";

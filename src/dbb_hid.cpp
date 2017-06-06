@@ -6,12 +6,14 @@
 
 #include "hidapi/hidapi.h"
 
+#include "compat.h"
 #include "utilstrencodings.h"
 
 #include <assert.h>
 #include <fstream>
 #include <iostream>
 #include <math.h>
+#include <string.h>
 
 #define HID_READ_TIMEOUT (120 * 1000)
 #define HID_MAX_BUF_SIZE 5120

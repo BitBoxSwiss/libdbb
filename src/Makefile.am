@@ -87,6 +87,8 @@ if ENABLE_TESTS
   bin_PROGRAMS += tests
   tests_SOURCES = test/test.cpp
   tests_CPPFLAGS = $(AM_CPPFLAGS) $(LIBDBB_INCLUDES)
+  tests_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+  tests_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
   tests_LDADD = $(LIBDBB)
 endif
 

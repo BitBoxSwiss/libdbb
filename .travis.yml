@@ -1,0 +1,105 @@
+language: cpp
+
+cache:
+  apt: true
+  pip: true
+
+matrix:
+    fast_finish:
+        - true
+    include:
+      - os: osx
+        compiler: clang
+        env: RUN_TESTS="yes"
+      - os: linux
+        compiler: x86_64-w64-mingw32-gcc
+        env: RUN_WIN_TESTS="yes"
+        addons:
+          apt:
+            sources:
+              - ubuntu-toolchain-r-test
+            packages:
+              - gcc-4.8
+              - g++-4.8
+              - clang
+              - libudev-dev
+              - libusb-1.0-0-dev
+              - binutils-mingw-w64
+              - g++-mingw-w64-x86-64
+              - gcc-mingw-w64
+              - wine
+      - os: linux
+        compiler: gcc
+        env: RUN_TESTS="yes" VALGRIND_UNIT_TESTS="yes" SUBMIT_COVERALLS="no"
+        install:
+          - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
+        addons:
+          apt:
+            sources:
+              - ubuntu-toolchain-r-test
+            packages:
+              - gcc-4.8
+              - g++-4.8
+              - valgrind
+              - clang
+              - libudev-dev
+              - libusb-1.0-0-dev
+      - os: linux
+        compiler: arm-linux-gnueabihf-gcc
+        env: HOST="arm-linux-gnueabihf" CROSS_COMPILE="yes"
+        addons:
+          apt:
+            sources:
+              - ubuntu-toolchain-r-test
+            packages:
+              - gcc-4.8
+              - g++-4.8
+              - g++-arm-linux-gnueabihf
+              - clang
+              - libudev-dev
+              - libusb-1.0-0-dev
+      - os: linux
+        compiler: gcc
+        install:
+          - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
+        env: BUILD32="yes"
+        addons:
+          apt:
+            sources:
+              - ubuntu-toolchain-r-test
+            packages:
+              - gcc-4.8
+              - g++-4.8
+              - g++-4.8-multilib
+              - clang
+              - libudev-dev
+              - libusb-1.0-0-dev
+
+before_install:
+  - if [ "${SUBMIT_COVERALLS}" = "yes" ]; then pip install --user git+git://github.com/eddyxu/cpp-coveralls.git; fi
+
+script: 
+    - if [ "$SUBMIT_COVERALLS" == "yes" ]; then
+        ./autogen.sh
+        && ./configure
+        && make -j2
+        ;
+      else
+        ./autogen.sh
+        && ./configure
+        && make -j2
+        ;
+      fi
+    - if [ "$VALGRIND_UNIT_TESTS" == "yes" ]; then
+        ls -la
+        ;
+      elif [ "$RUN_WIN_TESTS" == "yes" ]; then
+        ls -la
+        ;
+      elif [ "$RUN_TESTS" == "yes" ]; then
+        ls -la
+        ;
+      fi
+
+after_success:
+  - if [ "$SUBMIT_COVERALLS" == "yes" ]; then coveralls --verbose -e $TRAVIS_BUILD_DIR/ref/c/segwit_addr.c -x c -b $TRAVIS_BUILD_DIR/ref/c -r $TRAVIS_BUILD_DIR/ref/c --gcov-options '\-lp'; fi;

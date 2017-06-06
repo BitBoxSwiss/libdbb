@@ -19,7 +19,7 @@
 
 
 const static int FIND_DEVICE_POLL_INTERVAL_IN_MS = 1000;
-DBB::~DBB()
+DBBDeviceManager::~DBBDeviceManager()
 {
     m_stopCheckThread = true;
     m_stopExecuteThread = true;
@@ -28,7 +28,7 @@ DBB::~DBB()
     printf("stop...\n");
 }
 
-DBB::DBB(deviceStateChangedCallback stateChangeCallbackIn) : m_stopCheckThread(false), m_pauseCheckThread(false), m_stopExecuteThread(false), m_deviceChanged(stateChangeCallbackIn)
+DBBDeviceManager::DBBDeviceManager(deviceStateChangedCallback stateChangeCallbackIn) : m_stopCheckThread(false), m_pauseCheckThread(false), m_stopExecuteThread(false), m_deviceChanged(stateChangeCallbackIn)
 {
     // for now, always use the HID communcation interface
     m_comInterface = std::unique_ptr<DBBCommunicationInterface>(new DBBCommunicationInterfaceHID());
@@ -79,7 +79,7 @@ DBB::DBB(deviceStateChangedCallback stateChangeCallbackIn) : m_stopCheckThread(f
     });
 }
 
-bool DBB::decodeAndDecrypt(const std::string& base64Ciphertext, const std::string& passphrase, std::string& plaintextOut)
+bool DBBDeviceManager::decodeAndDecrypt(const std::string& base64Ciphertext, const std::string& passphrase, std::string& plaintextOut)
 {
     if (base64Ciphertext.empty() || passphrase.empty())
         return false;
@@ -99,7 +99,7 @@ bool DBB::decodeAndDecrypt(const std::string& base64Ciphertext, const std::strin
     return (size > 0);
 }
 
-bool DBB::encryptAndEncode(const std::string& json, const std::string& passphrase, std::string& encodeOut)
+bool DBBDeviceManager::encryptAndEncode(const std::string& json, const std::string& passphrase, std::string& encodeOut)
 {
     if (passphrase.empty())
         return false;
@@ -132,7 +132,7 @@ bool DBB::encryptAndEncode(const std::string& json, const std::string& passphras
     return true;
 }
 
-bool DBB::sendCommand(const std::string& json, const std::string& passphrase, std::string& result, commandCallback callback, bool encrypt)
+bool DBBDeviceManager::sendCommand(const std::string& json, const std::string& passphrase, std::string& result, commandCallback callback, bool encrypt)
 {
     std::string textToSend = json;
     if (encrypt) {
@@ -158,7 +158,7 @@ bool DBB::sendCommand(const std::string& json, const std::string& passphrase, st
     return true;
 }
 
-bool DBB::upgradeFirmware(const std::string& filename)
+bool DBBDeviceManager::upgradeFirmware(const std::string& filename, bool developmentDevice, std::string* developmentSignature)
 {
     // load file
     bool res = false;
@@ -171,9 +171,11 @@ bool DBB::upgradeFirmware(const std::string& filename)
     firmwareFile.seekg(0, std::ios::beg);
 
     //read signatures
-    unsigned char sigByte[FIRMWARE_SIGLEN];
-    firmwareFile.read((char*)&sigByte[0], FIRMWARE_SIGLEN);
-    sigStr = HexStr(sigByte, sigByte + FIRMWARE_SIGLEN);
+    if (!developmentDevice) {
+        unsigned char sigByte[FIRMWARE_SIGLEN];
+        firmwareFile.read((char*)&sigByte[0], FIRMWARE_SIGLEN);
+        sigStr = HexStr(sigByte, sigByte + FIRMWARE_SIGLEN);
+    }
 
     //read firmware
     std::vector<unsigned char> firmwareBuffer(DBB_FIRMWARE_LENGTH);
@@ -187,6 +189,11 @@ bool DBB::upgradeFirmware(const std::string& filename)
         pos += bytes;
     }
     firmwareFile.close();
+
+    // apply dummy signature
+    if (developmentDevice && developmentSignature) {
+        sigStr = *developmentSignature;
+    }
 
     // append 0xff to the rest of the firmware buffer
     memset((void*)(&firmwareBuffer[0] + pos), 0xff, DBB_FIRMWARE_LENGTH - pos);

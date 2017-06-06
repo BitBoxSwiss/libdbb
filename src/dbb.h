@@ -64,7 +64,7 @@ public:
     virtual bool upgradeFirmware(const std::vector<unsigned char>& firmwarePadded, const size_t firmwareSize, const std::string& sigCmpStr, progressCallback progressCB) = 0;
 };
 
-class DBB
+class DBBDeviceManager
 {
     /* callback function once a command has been executed */
     typedef std::function<void(const std::string& result, int status)> commandCallback;
@@ -105,8 +105,8 @@ public:
      * instantiate a new device interaction manager
      * Be aware that the callbacks are called on either the usbCheckThread or the usbExecutionThread
      */
-    DBB(deviceStateChangedCallback stateChangeCallbackIn);
-    ~DBB();
+    DBBDeviceManager(deviceStateChangedCallback stateChangeCallbackIn);
+    ~DBBDeviceManager();
 
     /* dispatch a command
      * The communication will happen on the execution thread
@@ -114,8 +114,12 @@ public:
      */
     bool sendCommand(const std::string& json, const std::string& passphrase, std::string& result, commandCallback callback, bool encrypt = true);
 
-    // try to upgrade firmware, will require a device in DBBDeviceState::Bootloader state
-    bool upgradeFirmware(const std::string& filename);
+    /* try to upgrade firmware, will require a device in DBBDeviceState::Bootloader state
+     * developmentDevice      (set to true if you want to upgrade the firmware on a development device
+     * developmentSignature   (if not a nullptr, this ECDSA secp256k1 compact signature (64 bytes) will be applied
+     *                         works only on development devices)
+     */
+    bool upgradeFirmware(const std::string& filename, bool developmentDevice = false, std::string* developmentSignature = nullptr);
 };
 
 #endif // LIBDBB_DBB_H
