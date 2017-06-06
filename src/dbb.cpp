@@ -17,6 +17,8 @@
 #include <iostream>
 #include <time.h>
 
+
+const static int FIND_DEVICE_POLL_INTERVAL_IN_MS = 1000;
 DBB::~DBB()
 {
     m_stopCheckThread = true;
@@ -26,42 +28,41 @@ DBB::~DBB()
     printf("stop...\n");
 }
 
-DBB::DBB() : m_stopCheckThread(false)
+DBB::DBB(deviceStateChangedCallback stateChangeCallbackIn) : m_stopCheckThread(false), m_pauseCheckThread(false), m_stopExecuteThread(false), m_deviceChanged(stateChangeCallbackIn)
 {
-    comInterface = std::unique_ptr<DBBCommunicationInterface>(new DBBCommunicationInterfaceHID());
+    // for now, always use the HID communcation interface
+    m_comInterface = std::unique_ptr<DBBCommunicationInterface>(new DBBCommunicationInterfaceHID());
 
+    // dispatch the USB check thread
     m_usbCheckThread = std::thread([&]() {
+        DBBDeviceState currentDeviceState = DBBDeviceState::NoDevice;
         while (!m_stopCheckThread)
         {
             if (!m_pauseCheckThread) {
-                std::lock_guard<std::mutex> lock(m_comLock);
-            }
-            /*enum DBB::dbb_device_mode oldDeviceType;
-            //check devices
-            if (firmwareUpdateHID) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-                continue;
-            }
-            {
-                std::unique_lock<std::mutex> lock(cs_queue);
-                std::string devicePath;
-                enum DBB::dbb_device_mode deviceType = DBB::deviceAvailable(devicePath);
-
-                if (dbbGUI && oldDeviceType != deviceType) {
-                    dbbGUI->deviceStateHasChanged( (deviceType != DBB::DBB_DEVICE_UNKNOWN && deviceType != DBB::DBB_DEVICE_NO_DEVICE), deviceType);
-                    oldDeviceType = deviceType;
+                DBBDeviceState state;
+                std::string possibleDeviceIdentifier;
+                {
+                    std::lock_guard<std::mutex> lock(m_comLock);
+                    state = m_comInterface->findDevice(possibleDeviceIdentifier);
+                }
+                if (currentDeviceState != state) {
+                    // device state has changed, inform via callback
+                    m_deviceChanged(state, possibleDeviceIdentifier);
+                    currentDeviceState = state;
                 }
             }
-            */
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            std::this_thread::sleep_for(std::chrono::milliseconds(FIND_DEVICE_POLL_INTERVAL_IN_MS));
         }
     });
 
+    // dispatch the execution thread
     m_usbExecuteThread = std::thread([&]() {
-        while (!m_stopExecuteThread || threadQueue.size() > 0)
+
+        // loop unless shutdown has been requested and queue is empty
+        while (!m_stopExecuteThread || m_threadQueue.size() > 0)
         {
             // dequeue a execution package
-            commandPackage cmdCB = threadQueue.dequeue();
+            commandPackage cmdCB = m_threadQueue.dequeue();
 
             std::string result;
 
@@ -69,9 +70,9 @@ DBB::DBB() : m_stopCheckThread(false)
             bool res;
             {
                 std::lock_guard<std::mutex> lock(m_comLock);
-                comInterface->openConnection();
-                res = comInterface->sendSynchronousJSON(cmdCB.first, result);
-                comInterface->closeConnection();
+                m_comInterface->openConnection(std::string());
+                res = m_comInterface->sendSynchronousJSON(cmdCB.first, result);
+                m_comInterface->closeConnection();
             }
 
             // call callback with result
@@ -86,8 +87,6 @@ bool DBB::decodeAndDecrypt(const std::string& base64Ciphertext, const std::strin
         return false;
 
     std::string ciphertext = DecodeBase64(base64Ciphertext);
-
-    // KDF: use a double sha256 stretching (legacy)
     uint256 passphraseHash;
     Hash256().Write((unsigned char*)passphrase.data(), passphrase.size()).Finalize(passphraseHash.begin());
 
@@ -106,7 +105,9 @@ bool DBB::encryptAndEncode(const std::string& json, const std::string& passphras
     if (passphrase.empty())
         return false;
 
-    // KDF: use a double sha256 stretching (legacy)
+    // KDF: use a double sha256 stretching
+    // KDF strengt doesn't matter that much because the maximal
+    // amount of attempts before the device gets erases is 15
     uint256 passphraseHash;
     Hash256().Write((unsigned char*)passphrase.data(), passphrase.size()).Finalize(passphraseHash.begin());
 
@@ -137,7 +138,7 @@ bool DBB::sendCommand(const std::string& json, const std::string& passphrase, st
     if (encrypt) {
         encryptAndEncode(json, passphrase, textToSend);
     }
-    threadQueue.enqueue(commandPackage(textToSend, [this, passphrase, callback](const std::string& result, int status){
+    m_threadQueue.enqueue(commandPackage(textToSend, [this, passphrase, callback](const std::string& result, int status){
         // parse result and try to decrypt
         std::string valueToPass = result;
         UniValue resultParsed;
@@ -158,40 +159,44 @@ bool DBB::sendCommand(const std::string& json, const std::string& passphrase, st
 }
 
 bool DBB::upgradeFirmware(const std::string &filename) {
+    // load file
+    bool res = false;
     std::ifstream firmwareFile(filename, std::ios::binary | std::ios::ate);
     std::streamsize firmwareSize = firmwareFile.tellg();
-    if (firmwareSize > 0)
-    {
-        std::string sigStr;
-        firmwareFile.seekg(0, std::ios::beg);
-        //read signatures
-        unsigned char sigByte[FIRMWARE_SIGLEN];
-        firmwareFile.read((char *)&sigByte[0], FIRMWARE_SIGLEN);
-        sigStr = HexStr(sigByte, sigByte + FIRMWARE_SIGLEN);
-
-        //read firmware
-        std::vector<unsigned char> firmwareBuffer(DBB_FIRMWARE_LENGTH);
-        unsigned int pos = 0;
-        while (true)
-        {
-            firmwareFile.read(reinterpret_cast<char*>(&firmwareBuffer[0]+pos), FIRMWARE_CHUNKSIZE);
-            std::streamsize bytes = firmwareFile.gcount();
-            if (bytes == 0)
-                break;
-
-            pos += bytes;
-        }
-        firmwareFile.close();
-
-        // append 0xff to the rest of the firmware buffer
-        memset((void *)(&firmwareBuffer[0]+pos), 0xff, DBB_FIRMWARE_LENGTH-pos);
-        {
-            std::lock_guard<std::mutex> lock(m_comLock);
-            return comInterface->upgradeFirmware(firmwareBuffer, firmwareSize, sigStr, [](float progress){
-                printf("Upgrade firmware: %.2f%%\n", progress);
-            });
-            return true;
-        }
+    if (firmwareSize <= 0) {
+        return res;
     }
-    return false;
+    std::string sigStr;
+    firmwareFile.seekg(0, std::ios::beg);
+
+    //read signatures
+    unsigned char sigByte[FIRMWARE_SIGLEN];
+    firmwareFile.read((char *)&sigByte[0], FIRMWARE_SIGLEN);
+    sigStr = HexStr(sigByte, sigByte + FIRMWARE_SIGLEN);
+
+    //read firmware
+    std::vector<unsigned char> firmwareBuffer(DBB_FIRMWARE_LENGTH);
+    unsigned int pos = 0;
+    while (true)
+    {
+        firmwareFile.read(reinterpret_cast<char*>(&firmwareBuffer[0]+pos), FIRMWARE_CHUNKSIZE);
+        std::streamsize bytes = firmwareFile.gcount();
+        if (bytes == 0)
+            break;
+
+        pos += bytes;
+    }
+    firmwareFile.close();
+
+    // append 0xff to the rest of the firmware buffer
+    memset((void *)(&firmwareBuffer[0]+pos), 0xff, DBB_FIRMWARE_LENGTH-pos);
+    {
+        std::lock_guard<std::mutex> lock(m_comLock);
+        m_pauseCheckThread = true;
+        res = m_comInterface->upgradeFirmware(firmwareBuffer, firmwareSize, sigStr, [](float progress){
+            printf("Upgrade firmware: %.2f%%\n", progress);
+        });
+        m_pauseCheckThread = false;
+    }
+    return res;
 }

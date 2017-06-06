@@ -205,11 +205,11 @@ bool DBBCommunicationInterfaceHID::closeConnection()
     return false;
 }
 
-bool DBBCommunicationInterfaceHID::openConnection() {
-    return openConnectionAtPath("");
+bool DBBCommunicationInterfaceHID::openConnection(const std::string& deviceIdentifier) {
+    return openConnectionAtPath(deviceIdentifier);
 }
 
-DBBDeviceState DBBCommunicationInterfaceHID::connectionPossible(std::string& devicePathOut) {
+DBBDeviceState DBBCommunicationInterfaceHID::findDevice(std::string& devicePathOut) {
     struct hid_device_info* devs, *cur_dev;
 
     devs = hid_enumerate(0x03eb, 0x2402);
@@ -283,7 +283,7 @@ bool DBBCommunicationInterfaceHID::openConnectionAtPath(const std::string& devic
         // find and select a possible device
 
         std::string possibleDevicePath;
-        if (connectionPossible(possibleDevicePath) == DBBDeviceState::Firmware) {
+        if (findDevice(possibleDevicePath) == DBBDeviceState::Firmware) {
             pathToCheck = possibleDevicePath;
         }
     }
@@ -328,7 +328,7 @@ bool DBBCommunicationInterfaceHID::sendSynchronousJSON(const std::string& json, 
 bool DBBCommunicationInterfaceHID::upgradeFirmware(const std::vector<unsigned char>& firmwarePadded, size_t firmwareSize, const std::string& sigCmpStr, progressCallback progressCB) {
 
     std::string possibleDevicePath;
-    if (connectionPossible(possibleDevicePath) != DBBDeviceState::Bootloader || !openConnectionAtPath(possibleDevicePath)) {
+    if (findDevice(possibleDevicePath) != DBBDeviceState::Bootloader || !openConnectionAtPath(possibleDevicePath)) {
         return false;
     }
 

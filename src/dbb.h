@@ -23,39 +23,70 @@
 
 typedef std::function<void(float progress)> progressCallback;
 
+/* ENUMs for the possible device states */
+enum class DBBDeviceState {
+    NoDevice,
+    Firmware,
+    FirmwareUninitialized,
+    Bootloader,
+    FirmwareToOldAndUnsupported
+};
+
 /* DBBCommunicationInterface abstract communication interface
  *
+ * TODO: add a way to select a device if multiple are connected
  */
 class DBBCommunicationInterface {
 public:
 
     virtual ~DBBCommunicationInterface() {}
 
-    virtual bool openConnection() =0;
+    /* Detects if a DigitalBitbox device is available and returns the possible DBBDeviceState
+     * deviceIdentifierOut will be populated if a device has been found
+     * INFO: deviceIdentifierOut is for future multidevice useage
+     */
+    virtual DBBDeviceState findDevice(std::string& deviceIdentifierOut) =0;
+
+    /* open a connection to the primary device
+     * If the deviceIdentifier is unset or empty, the communication interface will then
+     * try to connect to the primary available device
+     * INFO: deviceIdentifierOut is for future multidevice useage
+     */
+    virtual bool openConnection(const std::string& deviceIdentifier) =0;
+
+    // close current connection
     virtual bool closeConnection() =0;
+
+    // send JSON to the device
     virtual bool sendSynchronousJSON(const std::string& json, std::string& result) =0;
 
+    // upgrade firmware with data blob
     virtual bool upgradeFirmware(const std::vector<unsigned char>& firmwarePadded, const size_t firmwareSize, const std::string& sigCmpStr, progressCallback progressCB) =0;
 };
 
-enum class DBBDeviceState {NoDevice, Firmware, FirmwareUninitialized, Bootloader, FirmwareToOldAndUnsupported};
 class DBB
 {
     /* callback function once a command has been executed */
     typedef std::function<void(const std::string& result, int status)> commandCallback;
 
+    /* callback function once the device state has changed */
+    typedef std::function<void(const DBBDeviceState, const std::string& deviceIdentifier)> deviceStateChangedCallback;
+
     /* command package for the queue, json and callback */
     typedef std::pair<const std::string, commandCallback> commandPackage;
 
 private:
-    mutable std::mutex m_comLock;
+    mutable std::mutex m_comLock; //!< lock for the communication interface
 
     std::atomic<bool> m_stopCheckThread;
     std::atomic<bool> m_pauseCheckThread;
     std::atomic<bool> m_stopExecuteThread;
 
+    /* Find device state change callback */
+    deviceStateChangedCallback m_deviceChanged;
+
     /* the command execution queue */
-    SafeQueue<commandPackage> threadQueue;
+    SafeQueue<commandPackage> m_threadQueue;
 
     /* device check thread */
     std::thread m_usbCheckThread;
@@ -64,14 +95,17 @@ private:
     std::thread m_usbExecuteThread;
 
     /* communication interface */
-    std::unique_ptr<DBBCommunicationInterface> comInterface;
+    std::unique_ptr<DBBCommunicationInterface> m_comInterface;
 
     bool encryptAndEncode(const std::string& json, const std::string& passphrase, std::string& base64out);
     bool decodeAndDecrypt(const std::string& base64Ciphertext, const std::string& passphrase, std::string& encodeOut);
 
 public:
-
-    DBB();
+    /*
+     * instantiate a new device interaction manager
+     * Be aware that the callbacks are called on either the usbCheckThread or the usbExecutionThread
+     */
+    DBB(deviceStateChangedCallback stateChangeCallbackIn);
     ~DBB();
 
     /* dispatch a command
@@ -79,6 +113,8 @@ public:
      * The callback will be called via the execution thread
      */
     bool sendCommand(const std::string& json, const std::string& passphrase, std::string& result, commandCallback callback, bool encrypt = true);
+
+    // try to upgrade firmware, will require a device in DBBDeviceState::Bootloader state
     bool upgradeFirmware(const std::string& filename);
 };
 
