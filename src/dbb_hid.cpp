@@ -286,8 +286,6 @@ bool DBBCommunicationInterfaceHID::sendSynchronousJSON(const std::string& json, 
         return false;
     }
 
-    int res;
-
     memset(m_HIDReportBuffer, 0, HID_MAX_BUF_SIZE);
     if (json.size() + 1 > HID_MAX_BUF_SIZE) {
         return false;
@@ -300,9 +298,9 @@ bool DBBCommunicationInterfaceHID::sendSynchronousJSON(const std::string& json, 
     m_HIDReportBuffer[0] = 0x00;
     memcpy(m_HIDReportBuffer + reportShift, json.c_str(), std::min(HID_MAX_BUF_SIZE, (int)json.size()));
 
-    res = api_hid_send_frames(m_HIDHandle, HWW_CID, HWW_COMMAND, json.c_str(), json.size());
+    api_hid_send_frames(m_HIDHandle, HWW_CID, HWW_COMMAND, json.c_str(), json.size());
     memset(m_HIDReportBuffer, 0, HID_MAX_BUF_SIZE);
-    res = api_hid_read_frames(m_HIDHandle, HWW_CID, HWW_COMMAND, m_HIDReportBuffer, sizeof(m_HIDReportBuffer));
+    api_hid_read_frames(m_HIDHandle, HWW_CID, HWW_COMMAND, m_HIDReportBuffer, sizeof(m_HIDReportBuffer));
 
     result.assign((const char*)m_HIDReportBuffer);
     return true;
