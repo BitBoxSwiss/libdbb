@@ -120,6 +120,9 @@ public:
      *                         works only on development devices)
      */
     bool upgradeFirmware(const std::string& filename, bool developmentDevice = false, std::string* developmentSignature = nullptr);
+
+    /* looks for a possible DigitalBitbox device to connect to */
+    DBBDeviceState findDevice(std::string& deviceIdentifierOut);
 };
 
 #endif // LIBDBB_DBB_H

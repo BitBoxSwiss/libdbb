@@ -207,3 +207,8 @@ bool DBBDeviceManager::upgradeFirmware(const std::string& filename, bool develop
     }
     return res;
 }
+
+DBBDeviceState DBBDeviceManager::findDevice(std::string& deviceIdentifierOut) {
+    std::lock_guard<std::mutex> lock(m_comLock);
+    return m_comInterface->findDevice(deviceIdentifierOut);
+}
