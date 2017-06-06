@@ -6,10 +6,10 @@
 
 #include "crypto/aes.h"
 #include "crypto/random.h"
-#include "uint256.h"
-#include "utilstrencodings.h"
 #include "dbb_hid.h"
 #include "support/cleanse.h"
+#include "uint256.h"
+#include "utilstrencodings.h"
 
 #include "univalue.h"
 
@@ -36,8 +36,7 @@ DBB::DBB(deviceStateChangedCallback stateChangeCallbackIn) : m_stopCheckThread(f
     // dispatch the USB check thread
     m_usbCheckThread = std::thread([&]() {
         DBBDeviceState currentDeviceState = DBBDeviceState::NoDevice;
-        while (!m_stopCheckThread)
-        {
+        while (!m_stopCheckThread) {
             if (!m_pauseCheckThread) {
                 DBBDeviceState state;
                 std::string possibleDeviceIdentifier;
@@ -59,8 +58,7 @@ DBB::DBB(deviceStateChangedCallback stateChangeCallbackIn) : m_stopCheckThread(f
     m_usbExecuteThread = std::thread([&]() {
 
         // loop unless shutdown has been requested and queue is empty
-        while (!m_stopExecuteThread || m_threadQueue.size() > 0)
-        {
+        while (!m_stopExecuteThread || m_threadQueue.size() > 0) {
             // dequeue a execution package
             commandPackage cmdCB = m_threadQueue.dequeue();
 
@@ -90,10 +88,10 @@ bool DBB::decodeAndDecrypt(const std::string& base64Ciphertext, const std::strin
     uint256 passphraseHash;
     Hash256().Write((unsigned char*)passphrase.data(), passphrase.size()).Finalize(passphraseHash.begin());
 
-    plaintextOut.resize(ciphertext.size()-AES_BLOCKSIZE);
+    plaintextOut.resize(ciphertext.size() - AES_BLOCKSIZE);
 
     AES256CBCDecrypt dec(passphraseHash.begin(), reinterpret_cast<const unsigned char*>(&ciphertext[0]) /* pass IV via cipertext buffer */, true);
-    int size = dec.Decrypt(reinterpret_cast<const unsigned char*>(&ciphertext[0]+AES_BLOCKSIZE), ciphertext.size()-AES_BLOCKSIZE, reinterpret_cast<unsigned char*>(&plaintextOut[0]));
+    int size = dec.Decrypt(reinterpret_cast<const unsigned char*>(&ciphertext[0] + AES_BLOCKSIZE), ciphertext.size() - AES_BLOCKSIZE, reinterpret_cast<unsigned char*>(&plaintextOut[0]));
     plaintextOut.resize(size);
 
     memory_cleanse(passphraseHash.begin(), passphraseHash.size());
@@ -101,7 +99,8 @@ bool DBB::decodeAndDecrypt(const std::string& base64Ciphertext, const std::strin
     return (size > 0);
 }
 
-bool DBB::encryptAndEncode(const std::string& json, const std::string& passphrase, std::string& encodeOut) {
+bool DBB::encryptAndEncode(const std::string& json, const std::string& passphrase, std::string& encodeOut)
+{
     if (passphrase.empty())
         return false;
 
@@ -119,10 +118,10 @@ bool DBB::encryptAndEncode(const std::string& json, const std::string& passphras
 
     // encrypt the json and write it to the buffer after the IV
     AES256CBCEncrypt enc(passphraseHash.begin(), &ciphertext[0] /* pass IV via cipertext buffer */, true);
-    int size = enc.Encrypt(reinterpret_cast<const unsigned char*>(&json[0]), json.size(), &ciphertext[0]+AES_BLOCKSIZE);
+    int size = enc.Encrypt(reinterpret_cast<const unsigned char*>(&json[0]), json.size(), &ciphertext[0] + AES_BLOCKSIZE);
 
     // resize the buffer, make sure we respect the IV space
-    ciphertext.resize(size+AES_BLOCKSIZE);
+    ciphertext.resize(size + AES_BLOCKSIZE);
 
     // base64 encoding
     encodeOut = EncodeBase64(&ciphertext[0], ciphertext.size());
@@ -133,12 +132,13 @@ bool DBB::encryptAndEncode(const std::string& json, const std::string& passphras
     return true;
 }
 
-bool DBB::sendCommand(const std::string& json, const std::string& passphrase, std::string& result, commandCallback callback, bool encrypt) {
+bool DBB::sendCommand(const std::string& json, const std::string& passphrase, std::string& result, commandCallback callback, bool encrypt)
+{
     std::string textToSend = json;
     if (encrypt) {
         encryptAndEncode(json, passphrase, textToSend);
     }
-    m_threadQueue.enqueue(commandPackage(textToSend, [this, passphrase, callback](const std::string& result, int status){
+    m_threadQueue.enqueue(commandPackage(textToSend, [this, passphrase, callback](const std::string& result, int status) {
         // parse result and try to decrypt
         std::string valueToPass = result;
         UniValue resultParsed;
@@ -158,7 +158,8 @@ bool DBB::sendCommand(const std::string& json, const std::string& passphrase, st
     return true;
 }
 
-bool DBB::upgradeFirmware(const std::string &filename) {
+bool DBB::upgradeFirmware(const std::string& filename)
+{
     // load file
     bool res = false;
     std::ifstream firmwareFile(filename, std::ios::binary | std::ios::ate);
@@ -171,15 +172,14 @@ bool DBB::upgradeFirmware(const std::string &filename) {
 
     //read signatures
     unsigned char sigByte[FIRMWARE_SIGLEN];
-    firmwareFile.read((char *)&sigByte[0], FIRMWARE_SIGLEN);
+    firmwareFile.read((char*)&sigByte[0], FIRMWARE_SIGLEN);
     sigStr = HexStr(sigByte, sigByte + FIRMWARE_SIGLEN);
 
     //read firmware
     std::vector<unsigned char> firmwareBuffer(DBB_FIRMWARE_LENGTH);
     unsigned int pos = 0;
-    while (true)
-    {
-        firmwareFile.read(reinterpret_cast<char*>(&firmwareBuffer[0]+pos), FIRMWARE_CHUNKSIZE);
+    while (true) {
+        firmwareFile.read(reinterpret_cast<char*>(&firmwareBuffer[0] + pos), FIRMWARE_CHUNKSIZE);
         std::streamsize bytes = firmwareFile.gcount();
         if (bytes == 0)
             break;
@@ -189,11 +189,11 @@ bool DBB::upgradeFirmware(const std::string &filename) {
     firmwareFile.close();
 
     // append 0xff to the rest of the firmware buffer
-    memset((void *)(&firmwareBuffer[0]+pos), 0xff, DBB_FIRMWARE_LENGTH-pos);
+    memset((void*)(&firmwareBuffer[0] + pos), 0xff, DBB_FIRMWARE_LENGTH - pos);
     {
         std::lock_guard<std::mutex> lock(m_comLock);
         m_pauseCheckThread = true;
-        res = m_comInterface->upgradeFirmware(firmwareBuffer, firmwareSize, sigStr, [](float progress){
+        res = m_comInterface->upgradeFirmware(firmwareBuffer, firmwareSize, sigStr, [](float progress) {
             printf("Upgrade firmware: %.2f%%\n", progress);
         });
         m_pauseCheckThread = false;

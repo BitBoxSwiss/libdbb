@@ -6,8 +6,8 @@
 #include "cleanse.h"
 #include <string.h>
 
-void memory_cleanse(void *ptr, size_t len)
+void memory_cleanse(void* ptr, size_t len)
 {
-    void *(*volatile const volatile_memset)(void *, int, size_t) = memset;
+    void* (*volatile const volatile_memset)(void*, int, size_t) = memset;
     volatile_memset(ptr, 0, len);
 }

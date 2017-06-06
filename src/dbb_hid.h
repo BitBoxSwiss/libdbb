@@ -17,7 +17,8 @@ struct hid_device_;
 /* DBBCommunicationInterfaceHID: A USB HID communication interface
  * Uses libhidapi
  */
-class DBBCommunicationInterfaceHID : public DBBCommunicationInterface {
+class DBBCommunicationInterfaceHID : public DBBCommunicationInterface
+{
 private:
     struct hid_device_* m_HIDHandle;
     unsigned char m_HIDReportBuffer[HID_MAX_BUF_SIZE]; //the USB HID in/out buffer

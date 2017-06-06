@@ -17,7 +17,7 @@
 #include <string>
 #include <thread>
 
-#define FIRMWARE_SIGLEN (7*64) //7 concatenated signatures
+#define FIRMWARE_SIGLEN (7 * 64)   //7 concatenated signatures
 #define DBB_FIRMWARE_LENGTH 225280 //flash size minus bootloader length
 #define FIRMWARE_CHUNKSIZE 4096
 
@@ -36,32 +36,32 @@ enum class DBBDeviceState {
  *
  * TODO: add a way to select a device if multiple are connected
  */
-class DBBCommunicationInterface {
+class DBBCommunicationInterface
+{
 public:
-
     virtual ~DBBCommunicationInterface() {}
 
     /* Detects if a DigitalBitbox device is available and returns the possible DBBDeviceState
      * deviceIdentifierOut will be populated if a device has been found
      * INFO: deviceIdentifierOut is for future multidevice useage
      */
-    virtual DBBDeviceState findDevice(std::string& deviceIdentifierOut) =0;
+    virtual DBBDeviceState findDevice(std::string& deviceIdentifierOut) = 0;
 
     /* open a connection to the primary device
      * If the deviceIdentifier is unset or empty, the communication interface will then
      * try to connect to the primary available device
      * INFO: deviceIdentifierOut is for future multidevice useage
      */
-    virtual bool openConnection(const std::string& deviceIdentifier) =0;
+    virtual bool openConnection(const std::string& deviceIdentifier) = 0;
 
     // close current connection
-    virtual bool closeConnection() =0;
+    virtual bool closeConnection() = 0;
 
     // send JSON to the device
-    virtual bool sendSynchronousJSON(const std::string& json, std::string& result) =0;
+    virtual bool sendSynchronousJSON(const std::string& json, std::string& result) = 0;
 
     // upgrade firmware with data blob
-    virtual bool upgradeFirmware(const std::vector<unsigned char>& firmwarePadded, const size_t firmwareSize, const std::string& sigCmpStr, progressCallback progressCB) =0;
+    virtual bool upgradeFirmware(const std::vector<unsigned char>& firmwarePadded, const size_t firmwareSize, const std::string& sigCmpStr, progressCallback progressCB) = 0;
 };
 
 class DBB

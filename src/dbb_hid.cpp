@@ -18,58 +18,58 @@
 #define HID_BL_BUF_SIZE_W 4098
 #define HID_BL_BUF_SIZE_R 256
 
-#define BACKUP_KEY_PBKDF2_SALT     "Digital Bitbox"
-#define BACKUP_KEY_PBKDF2_SALTLEN  14
-#define BACKUP_KEY_PBKDF2_ROUNDS   20480
-#define BACKUP_KEY_PBKDF2_HMACLEN  64
+#define BACKUP_KEY_PBKDF2_SALT "Digital Bitbox"
+#define BACKUP_KEY_PBKDF2_SALTLEN 14
+#define BACKUP_KEY_PBKDF2_ROUNDS 20480
+#define BACKUP_KEY_PBKDF2_HMACLEN 64
 
-#define  USB_REPORT_SIZE 64
+#define USB_REPORT_SIZE 64
 #ifndef MIN
-#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
 
 #define HWW_CID 0xff000000
 
-#define TYPE_MASK               0x80    // Frame type mask
-#define TYPE_INIT               0x80    // Initial frame identifier
-#define TYPE_CONT               0x00    // Continuation frame identifier
+#define TYPE_MASK 0x80 // Frame type mask
+#define TYPE_INIT 0x80 // Initial frame identifier
+#define TYPE_CONT 0x00 // Continuation frame identifier
 
-#define ERR_INVALID_SEQ         0x04    // Invalid message sequencing
+#define ERR_INVALID_SEQ 0x04 // Invalid message sequencing
 
-#define U2FHID_ERROR        (TYPE_INIT | 0x3f)  // Error response
-#define U2FHID_VENDOR_FIRST (TYPE_INIT | 0x40)  // First vendor defined command
-#define HWW_COMMAND         (U2FHID_VENDOR_FIRST + 0x01)// Hardware wallet command
+#define U2FHID_ERROR (TYPE_INIT | 0x3f)          // Error response
+#define U2FHID_VENDOR_FIRST (TYPE_INIT | 0x40)   // First vendor defined command
+#define HWW_COMMAND (U2FHID_VENDOR_FIRST + 0x01) // Hardware wallet command
 
 #define FRAME_TYPE(f) ((f).type & TYPE_MASK)
-#define FRAME_CMD(f)  ((f).init.cmd & ~TYPE_MASK)
-#define MSG_LEN(f)    (((f).init.bcnth << 8) + (f).init.bcntl)
-#define FRAME_SEQ(f)  ((f).cont.seq & ~TYPE_MASK)
+#define FRAME_CMD(f) ((f).init.cmd & ~TYPE_MASK)
+#define MSG_LEN(f) (((f).init.bcnth << 8) + (f).init.bcntl)
+#define FRAME_SEQ(f) ((f).cont.seq & ~TYPE_MASK)
 
 __extension__ typedef struct {
-    uint32_t cid;               // Channel identifier
+    uint32_t cid; // Channel identifier
     union {
-        uint8_t type;           // Frame type - bit 7 defines type
+        uint8_t type; // Frame type - bit 7 defines type
         struct {
-            uint8_t cmd;        // Command - bit 7 set
-            uint8_t bcnth;      // Message byte count - high
-            uint8_t bcntl;      // Message byte count - low
+            uint8_t cmd;                       // Command - bit 7 set
+            uint8_t bcnth;                     // Message byte count - high
+            uint8_t bcntl;                     // Message byte count - low
             uint8_t data[USB_REPORT_SIZE - 7]; // Data payload
         } init;
         struct {
-            uint8_t seq;        // Sequence number - bit 7 cleared
+            uint8_t seq;                       // Sequence number - bit 7 cleared
             uint8_t data[USB_REPORT_SIZE - 5]; // Data payload
         } cont;
     };
 } USB_FRAME;
 
-static int api_hid_send_frame(hid_device* hid_handle, USB_FRAME *f)
+static int api_hid_send_frame(hid_device* hid_handle, USB_FRAME* f)
 {
     int res = 0;
     uint8_t d[sizeof(USB_FRAME) + 1];
     memset(d, 0, sizeof(d));
-    d[0] = 0;  // un-numbered report
-    f->cid = htonl(f->cid);  // cid is in network order on the wire
+    d[0] = 0;               // un-numbered report
+    f->cid = htonl(f->cid); // cid is in network order on the wire
     memcpy(d + 1, f, sizeof(USB_FRAME));
     f->cid = ntohl(f->cid);
 
@@ -83,13 +83,13 @@ static int api_hid_send_frame(hid_device* hid_handle, USB_FRAME *f)
 }
 
 
-static int api_hid_send_frames(hid_device* hid_handle, uint32_t cid, uint8_t cmd, const void *data, size_t size)
+static int api_hid_send_frames(hid_device* hid_handle, uint32_t cid, uint8_t cmd, const void* data, size_t size)
 {
     USB_FRAME frame;
     int res;
     size_t frameLen;
     uint8_t seq = 0;
-    const uint8_t *pData = (const uint8_t *) data;
+    const uint8_t* pData = (const uint8_t*)data;
 
     frame.cid = cid;
     frame.init.cmd = TYPE_INIT | cmd;
@@ -120,13 +120,12 @@ static int api_hid_send_frames(hid_device* hid_handle, uint32_t cid, uint8_t cmd
 }
 
 
-static int api_hid_read_frame(hid_device* hid_handle, USB_FRAME *r)
+static int api_hid_read_frame(hid_device* hid_handle, USB_FRAME* r)
 {
-
-    memset((int8_t *)r, 0xEE, sizeof(USB_FRAME));
+    memset((int8_t*)r, 0xEE, sizeof(USB_FRAME));
 
     int res = 0;
-    res = hid_read_timeout(hid_handle, (uint8_t *) r, sizeof(USB_FRAME), HID_READ_TIMEOUT);
+    res = hid_read_timeout(hid_handle, (uint8_t*)r, sizeof(USB_FRAME), HID_READ_TIMEOUT);
 
     if (res == sizeof(USB_FRAME)) {
         r->cid = ntohl(r->cid);
@@ -136,15 +135,15 @@ static int api_hid_read_frame(hid_device* hid_handle, USB_FRAME *r)
 }
 
 
-static int api_hid_read_frames(hid_device* hid_handle, uint32_t cid, uint8_t cmd, void *data, int max)
+static int api_hid_read_frames(hid_device* hid_handle, uint32_t cid, uint8_t cmd, void* data, int max)
 {
     USB_FRAME frame;
     int res, result;
     size_t totalLen, frameLen;
     uint8_t seq = 0;
-    uint8_t *pData = (uint8_t *) data;
+    uint8_t* pData = (uint8_t*)data;
 
-    (void) cmd;
+    (void)cmd;
 
     do {
         res = api_hid_read_frame(hid_handle, &frame);
@@ -205,12 +204,14 @@ bool DBBCommunicationInterfaceHID::closeConnection()
     return false;
 }
 
-bool DBBCommunicationInterfaceHID::openConnection(const std::string& deviceIdentifier) {
+bool DBBCommunicationInterfaceHID::openConnection(const std::string& deviceIdentifier)
+{
     return openConnectionAtPath(deviceIdentifier);
 }
 
-DBBDeviceState DBBCommunicationInterfaceHID::findDevice(std::string& devicePathOut) {
-    struct hid_device_info* devs, *cur_dev;
+DBBDeviceState DBBCommunicationInterfaceHID::findDevice(std::string& devicePathOut)
+{
+    struct hid_device_info *devs, *cur_dev;
 
     devs = hid_enumerate(0x03eb, 0x2402);
 
@@ -219,55 +220,45 @@ DBBDeviceState DBBCommunicationInterfaceHID::findDevice(std::string& devicePathO
     while (cur_dev) {
         if (cur_dev->interface_number == 0 || cur_dev->usage_page == 0xffff) {
             // get the manufacturer wide string
-            if (!cur_dev || !cur_dev->manufacturer_string || !cur_dev->serial_number || !cur_dev->path)
-            {
+            if (!cur_dev || !cur_dev->manufacturer_string || !cur_dev->serial_number || !cur_dev->path) {
                 cur_dev = cur_dev->next;
                 continue;
             }
             devicePathOut.resize(strlen(cur_dev->path));
             devicePathOut.assign(cur_dev->path);
             std::wstring wsMF(cur_dev->manufacturer_string);
-            std::string strMF( wsMF.begin(), wsMF.end() );
+            std::string strMF(wsMF.begin(), wsMF.end());
 
             // get the setial number wide string
             std::wstring wsSN(cur_dev->serial_number);
-            std::string strSN( wsSN.begin(), wsSN.end() );
+            std::string strSN(wsSN.begin(), wsSN.end());
 
             std::vector<std::string> vSNParts = str_split(strSN, ':');
 
-            if ((vSNParts.size() == 2 && vSNParts[0] == "dbb.fw") || strSN == "firmware")
-            {
+            if ((vSNParts.size() == 2 && vSNParts[0] == "dbb.fw") || strSN == "firmware") {
                 state = DBBDeviceState::Firmware;
                 // for now, only support one digit version numbers
-                if (vSNParts[1].size() >= 6 && vSNParts[1][0] == 'v')
-                {
+                if (vSNParts[1].size() >= 6 && vSNParts[1][0] == 'v') {
                     int major = vSNParts[1][1] - '0';
                     int minor = vSNParts[1][3] - '0';
                     // UNUSED // int patch = vSNParts[1][5] - '0';
 
                     // Support firmware >=2.1.0
-                    if (major < 2 || (major == 2 && minor < 1))
-                    {
+                    if (major < 2 || (major == 2 && minor < 1)) {
                         state = DBBDeviceState::FirmwareToOldAndUnsupported;
                     }
                 }
-                if (vSNParts[1].size() > 2 && vSNParts[1][vSNParts[1].size()-2] == '-' && vSNParts[1][vSNParts[1].size()-1] == '-') {
+                if (vSNParts[1].size() > 2 && vSNParts[1][vSNParts[1].size() - 2] == '-' && vSNParts[1][vSNParts[1].size() - 1] == '-') {
                     state = DBBDeviceState::FirmwareUninitialized;
                 }
                 break;
-            }
-            else if (vSNParts.size() == 2 && vSNParts[0] == "dbb.bl")
-            {
+            } else if (vSNParts.size() == 2 && vSNParts[0] == "dbb.bl") {
                 state = DBBDeviceState::Bootloader;
                 break;
-            }
-            else
-            {
+            } else {
                 cur_dev = cur_dev->next;
             }
-        }
-        else
-        {
+        } else {
             cur_dev = cur_dev->next;
         }
     }
@@ -304,8 +295,7 @@ bool DBBCommunicationInterfaceHID::sendSynchronousJSON(const std::string& json, 
     int res;
 
     memset(m_HIDReportBuffer, 0, HID_MAX_BUF_SIZE);
-    if (json.size()+1 > HID_MAX_BUF_SIZE)
-    {
+    if (json.size() + 1 > HID_MAX_BUF_SIZE) {
         return false;
     }
 
@@ -314,7 +304,7 @@ bool DBBCommunicationInterfaceHID::sendSynchronousJSON(const std::string& json, 
     reportShift = 1;
 #endif
     m_HIDReportBuffer[0] = 0x00;
-    memcpy(m_HIDReportBuffer+reportShift, json.c_str(), std::min(HID_MAX_BUF_SIZE, (int)json.size()));
+    memcpy(m_HIDReportBuffer + reportShift, json.c_str(), std::min(HID_MAX_BUF_SIZE, (int)json.size()));
 
     res = api_hid_send_frames(m_HIDHandle, HWW_CID, HWW_COMMAND, json.c_str(), json.size());
     memset(m_HIDReportBuffer, 0, HID_MAX_BUF_SIZE);
@@ -325,8 +315,8 @@ bool DBBCommunicationInterfaceHID::sendSynchronousJSON(const std::string& json, 
 }
 
 /* firmware */
-bool DBBCommunicationInterfaceHID::upgradeFirmware(const std::vector<unsigned char>& firmwarePadded, size_t firmwareSize, const std::string& sigCmpStr, progressCallback progressCB) {
-
+bool DBBCommunicationInterfaceHID::upgradeFirmware(const std::vector<unsigned char>& firmwarePadded, size_t firmwareSize, const std::string& sigCmpStr, progressCallback progressCB)
+{
     std::string possibleDevicePath;
     if (findDevice(possibleDevicePath) != DBBDeviceState::Bootloader || !openConnectionAtPath(possibleDevicePath)) {
         return false;
@@ -335,8 +325,9 @@ bool DBBCommunicationInterfaceHID::upgradeFirmware(const std::vector<unsigned ch
     std::vector<unsigned char> data;
     std::string result;
     uint16_t cmd;
-    uint8_t *ptr = (uint8_t *)&cmd;
-    *ptr = 'v'; ptr++;
+    uint8_t* ptr = (uint8_t*)&cmd;
+    *ptr = 'v';
+    ptr++;
     *ptr = '0';
 
     sendBootloaderCmd(cmd, data, result);
@@ -345,13 +336,15 @@ bool DBBCommunicationInterfaceHID::upgradeFirmware(const std::vector<unsigned ch
         return false;
     }
 
-    ptr = (uint8_t *)&cmd;
-    *ptr = 's'; ptr++;
+    ptr = (uint8_t*)&cmd;
+    *ptr = 's';
+    ptr++;
     *ptr = '0';
     sendBootloaderCmd(cmd, data, result);
 
-    ptr = (uint8_t *)&cmd;
-    *ptr = 'e'; ptr++;
+    ptr = (uint8_t*)&cmd;
+    *ptr = 'e';
+    ptr++;
     *ptr = 0xff;
     sendBootloaderCmd(cmd, data, result);
     int cnt = 0;
@@ -359,15 +352,15 @@ bool DBBCommunicationInterfaceHID::upgradeFirmware(const std::vector<unsigned ch
     int nChunks = ceil(firmwareSize / (float)FIRMWARE_CHUNKSIZE);
     progressCB(0.0);
 
-    ptr = (uint8_t *)&cmd;
-    *ptr = 'w'; ptr++;
-    while (pos+FIRMWARE_CHUNKSIZE < firmwarePadded.size())
-    {
-        std::vector<unsigned char> chunk(firmwarePadded.begin()+pos, firmwarePadded.begin()+pos+FIRMWARE_CHUNKSIZE);
+    ptr = (uint8_t*)&cmd;
+    *ptr = 'w';
+    ptr++;
+    while (pos + FIRMWARE_CHUNKSIZE < firmwarePadded.size()) {
+        std::vector<unsigned char> chunk(firmwarePadded.begin() + pos, firmwarePadded.begin() + pos + FIRMWARE_CHUNKSIZE);
 
         *ptr = cnt % 0xff;
-        sendBootloaderCmd(cmd,chunk,result);
-        progressCB(1.0/nChunks*cnt);
+        sendBootloaderCmd(cmd, chunk, result);
+        progressCB(1.0 / nChunks * cnt);
         pos += FIRMWARE_CHUNKSIZE;
         if (result != "w0") {
             closeConnection();
@@ -379,8 +372,9 @@ bool DBBCommunicationInterfaceHID::upgradeFirmware(const std::vector<unsigned ch
         cnt++;
     }
 
-    ptr = (uint8_t *)&cmd;
-    *ptr = 's'; ptr++;
+    ptr = (uint8_t*)&cmd;
+    *ptr = 's';
+    ptr++;
     *ptr = '0';
     sendBootloaderCmd(cmd, std::vector<unsigned char>(sigCmpStr.begin(), sigCmpStr.end()), result);
     if (result.size() < 2 || (result[0] != 's' && result[1] != '0')) {
@@ -399,21 +393,21 @@ bool DBBCommunicationInterfaceHID::sendBootloaderCmd(const uint16_t cmd, const s
     if (!m_HIDHandle)
         return false;
 
-    assert(data.size() <= HID_MAX_BUF_SIZE-2);
+    assert(data.size() <= HID_MAX_BUF_SIZE - 2);
     memset(m_HIDReportBuffer, 0xFF, HID_MAX_BUF_SIZE);
     int reportShift = 0;
 #ifdef DBB_ENABLE_HID_REPORT_SHIFT
     reportShift = 1;
     m_HIDReportBuffer[0] = 0x00;
 #endif
-    memcpy(&m_HIDReportBuffer[0+reportShift], &cmd, 2);
+    memcpy(&m_HIDReportBuffer[0 + reportShift], &cmd, 2);
     //m_HIDReportBuffer[0+reportShift] = 0x77;
     //m_HIDReportBuffer[1+reportShift] = chunknum % 0xff;
     if (data.size()) {
-        memcpy((void *)&m_HIDReportBuffer[2+reportShift], (unsigned char*)&data[0], data.size());
+        memcpy((void*)&m_HIDReportBuffer[2 + reportShift], (unsigned char*)&data[0], data.size());
     }
 
-    if(hid_write(m_HIDHandle, (unsigned char*)m_HIDReportBuffer, HID_BL_BUF_SIZE_W+reportShift) == -1) {
+    if (hid_write(m_HIDHandle, (unsigned char*)m_HIDReportBuffer, HID_BL_BUF_SIZE_W + reportShift) == -1) {
         return false;
     }
     memset(m_HIDReportBuffer, 0, HID_MAX_BUF_SIZE);

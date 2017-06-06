@@ -5,24 +5,24 @@
 
 #include "random.h"
 
+#include "compat.h" // for Windows API
 #include "crypto/sha512.h"
 #include "support/cleanse.h"
-#include "compat.h" // for Windows API
 #ifdef WIN32
 #include <wincrypt.h>
 #endif
 
-#include <stdlib.h>
 #include <limits>
+#include <stdlib.h>
 
 #ifndef WIN32
-#include <sys/time.h>
 #include <sys/fcntl.h>
+#include <sys/time.h>
 #endif
 
 #ifdef HAVE_SYS_GETRANDOM
-#include <sys/syscall.h>
 #include <linux/random.h>
+#include <sys/syscall.h>
 #endif
 #ifdef HAVE_GETENTROPY
 #include <unistd.h>
@@ -31,8 +31,8 @@
 #include <sys/sysctl.h>
 #endif
 
-#include <thread>
 #include <mutex>
+#include <thread>
 
 static void RandFailure()
 {
@@ -57,7 +57,7 @@ static inline int64_t GetPerformanceCounter()
 /** Fallback: get 32 bytes of system entropy from /dev/urandom. The most
  * compatible way to get cryptographic randomness on UNIX-ish platforms.
  */
-void GetDevURandom(unsigned char *ent32)
+void GetDevURandom(unsigned char* ent32)
 {
     int f = open("/dev/urandom", O_RDONLY);
     if (f == -1) {
@@ -76,7 +76,7 @@ void GetDevURandom(unsigned char *ent32)
 #endif
 
 /** Get 32 bytes of system entropy. */
-void GetOSRand(unsigned char *ent32)
+void GetOSRand(unsigned char* ent32)
 {
 #if defined(WIN32)
     HCRYPTPROV hProvider;
@@ -144,8 +144,8 @@ void GetRandBytes(unsigned char* buf, int num)
     unsigned char seed32[32];
 
     // Entropy sources
-    int64_t counter = GetPerformanceCounter(); // Time
-    int64_t* pcounter = &counter; // Stack frame pointer (thread specific)
+    int64_t counter = GetPerformanceCounter();     // Time
+    int64_t* pcounter = &counter;                  // Stack frame pointer (thread specific)
     unsigned char os_entropy[NUM_OS_RANDOM_BYTES]; // OS entropy
     GetOSRand(os_entropy);
 
@@ -171,8 +171,8 @@ void GetRandBytes(unsigned char* buf, int num)
     if (num <= 32) {
         memcpy(buf, seed32, num);
     } else {
-       ChaCha20 prng(seed32, 32);
-       prng.Output(buf, num);
+        ChaCha20 prng(seed32, 32);
+        prng.Output(buf, num);
     }
     memory_cleanse(seed32, 32);
 }
@@ -242,12 +242,12 @@ bool Random_SanityCheck()
     do {
         memset(data, 0, NUM_OS_RANDOM_BYTES);
         GetOSRand(data);
-        for (int x=0; x < NUM_OS_RANDOM_BYTES; ++x) {
+        for (int x = 0; x < NUM_OS_RANDOM_BYTES; ++x) {
             overwritten[x] |= (data[x] != 0);
         }
 
         num_overwritten = 0;
-        for (int x=0; x < NUM_OS_RANDOM_BYTES; ++x) {
+        for (int x = 0; x < NUM_OS_RANDOM_BYTES; ++x) {
             if (overwritten[x]) {
                 num_overwritten += 1;
             }
