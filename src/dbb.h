@@ -96,10 +96,6 @@ private:
 
     /* communication interface */
     std::unique_ptr<DBBCommunicationInterface> m_comInterface;
-
-    bool encryptAndEncode(const std::string& json, const std::string& passphrase, std::string& base64out);
-    bool decodeAndDecrypt(const std::string& base64Ciphertext, const std::string& passphrase, std::string& encodeOut);
-
 public:
     /*
      * instantiate a new device interaction manager
@@ -123,6 +119,17 @@ public:
 
     /* looks for a possible DigitalBitbox device to connect to */
     DBBDeviceState findDevice(std::string& deviceIdentifierOut);
+
+    /* AES256CBC encryptes and base64 encodes a json string
+     * The given passphrase will be hashes (doubla SHA256), this is sufficient because there are max. 15 attempts
+     * For offline-backups, eventually use a strong KDF for the passphrase in advance (PDKDF with >20k rounds or similar)
+     */
+    bool encryptAndEncode(const std::string& json, const std::string& passphrase, std::string& base64out);
+
+    /* base64 decodes and AES256CBC decrypts a given string
+     * The given passphrase will be hashes (doubla SHA256), this is sufficient because there are max. 15 attempts
+     */
+    bool decodeAndDecrypt(const std::string& base64Ciphertext, const std::string& passphrase, std::string& encodeOut);
 };
 
 #endif // LIBDBB_DBB_H

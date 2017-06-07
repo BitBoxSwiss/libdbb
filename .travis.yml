@@ -13,7 +13,7 @@ matrix:
         env: RUN_TESTS="yes"
       - os: linux
         compiler: x86_64-w64-mingw32-gcc
-        env: RUN_WIN_TESTS="yes"
+        env: HOST="x86_64-w64-mingw32" CROSS_COMPILE="yes" RUN_WIN_TESTS="yes"
         addons:
           apt:
             sources:
@@ -54,7 +54,8 @@ matrix:
             packages:
               - gcc-4.8
               - g++-4.8
-              - g++-arm-linux-gnueabihf
+              - g++-4.8-arm-linux-gnueabihf
+              - gcc-4.8-arm-linux-gnueabihf
               - clang
               - libudev-dev
               - libusb-1.0-0-dev
@@ -82,6 +83,11 @@ script:
     - if [ "$SUBMIT_COVERALLS" == "yes" ]; then
         ./autogen.sh
         && ./configure
+        && make -j2
+        ;
+      elif [ "$CROSS_COMPILE" == "yes" ]; then
+        ./autogen.sh
+        && ./configure --host=$HOST
         && make -j2
         ;
       else
