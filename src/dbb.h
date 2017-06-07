@@ -5,6 +5,10 @@
 #ifndef LIBDBB_DBB_H
 #define LIBDBB_DBB_H
 
+#if defined(HAVE_CONFIG_H)
+#include "config/libdbb-config.h"
+#endif
+
 #include "safequeue.h"
 
 #include <stdint.h>
@@ -95,10 +99,10 @@ private:
     SafeQueue<commandPackage> m_threadQueue;
 
     /* device check thread */
-    std::thread m_usbCheckThread;
+    std::thread m_pollDeviceStateThread;
 
     /* device command dispatching thread */
-    std::thread m_usbExecuteThread;
+    std::thread m_commandQueueWorkThread;
 
     /* communication interface */
     std::unique_ptr<DBBCommunicationInterface> m_comInterface;
@@ -107,7 +111,7 @@ private:
 public:
     /*
      * instantiate a new device interaction manager
-     * Be aware that the callbacks are called on either the usbCheckThread or the usbExecutionThread
+     * Be aware that the callbacks are called on either the m_pollDeviceStateThread or the m_commandQueueWorkThread
      */
     DBBDeviceManager(deviceStateChangedCallback stateChangeCallbackIn);
     ~DBBDeviceManager();

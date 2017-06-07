@@ -19,7 +19,7 @@ class SafeQueue
 {
 public:
     SafeQueue(void)
-        : q(), m(), c()
+        : q(), m(), c(), shutdownRequested(false)
     {
     }
 
@@ -32,6 +32,17 @@ public:
     {
         std::lock_guard<std::mutex> lock(m);
         return q.size();
+    }
+
+    // shutdown
+    void shutdown()
+    {
+        shutdownRequested = true;
+        c.notify_one();
+    }
+
+    bool isShutdown() {
+        return shutdownRequested;
     }
 
     // Add an element to the queue.
@@ -50,6 +61,9 @@ public:
         while (q.empty()) {
             // release lock as long as the wait and reaquire it afterwards.
             c.wait(lock);
+            if (shutdownRequested) {
+                return T();
+            }
         }
         T val = q.front();
         q.pop();
@@ -60,6 +74,7 @@ private:
     std::queue<T> q;
     mutable std::mutex m;
     std::condition_variable c;
+    std::atomic<bool> shutdownRequested;
 };
 
 #endif // LIBDBB_SAFEQUEUE_H

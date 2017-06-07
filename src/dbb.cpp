@@ -21,10 +21,12 @@
 const static int FIND_DEVICE_POLL_INTERVAL_IN_MS = 1000;
 DBBDeviceManager::~DBBDeviceManager()
 {
+    DBB_DEBUG("Shutdown DBBDeviceManager\n");
+    m_threadQueue.shutdown();
     m_stopCheckThread = true;
     m_stopExecuteThread = true;
-    m_usbCheckThread.join();
-    m_usbExecuteThread.join();
+    m_pollDeviceStateThread.join();
+    m_commandQueueWorkThread.join();
     printf("stop...\n");
 }
 
@@ -34,9 +36,9 @@ DBBDeviceManager::DBBDeviceManager(deviceStateChangedCallback stateChangeCallbac
     // for now, always use the HID communcation interface
     m_comInterface = std::unique_ptr<DBBCommunicationInterface>(new DBBCommunicationInterfaceHID());
 
-    // dispatch the USB check thread
-    DBB_DEBUG("Start USB device state poll thread\n");
-    m_usbCheckThread = std::thread([this]() {
+    // dispatch the device state poll thread
+    DBB_DEBUG("Start device state poll thread\n");
+    m_pollDeviceStateThread = std::thread([this]() {
         DBBDeviceState currentDeviceState = DBBDeviceState::NoDevice;
         while (!m_stopCheckThread) {
             if (!m_pauseCheckThread) {
@@ -53,17 +55,24 @@ DBBDeviceManager::DBBDeviceManager(deviceStateChangedCallback stateChangeCallbac
                     currentDeviceState = state;
                 }
             }
+            DBB_DEBUG("   [Poll] start sleep\n");
             std::this_thread::sleep_for(std::chrono::milliseconds(FIND_DEVICE_POLL_INTERVAL_IN_MS));
+            DBB_DEBUG("   [Poll] end sleep\n");
         }
+        DBB_DEBUG("   [Poll] exiting thread\n");
     });
 
     // dispatch the execution thread
-    DBB_DEBUG("Start USB execution thread\n");
-    m_usbExecuteThread = std::thread([this]() {
+    DBB_DEBUG("Start queue worker thread\n");
+    m_commandQueueWorkThread = std::thread([this]() {
         // loop unless shutdown has been requested and queue is empty
         while (!m_stopExecuteThread || m_threadQueue.size() > 0) {
             // dequeue a execution package
+            DBB_DEBUG("   [Execution] Start dequeued\n");
             commandPackage cmdCB = m_threadQueue.dequeue();
+            if (m_threadQueue.isShutdown()) {
+                break;
+            }
             DBB_DEBUG("   [Execution] Command dequeued\n");
             std::string result;
 
@@ -84,6 +93,7 @@ DBBDeviceManager::DBBDeviceManager(deviceStateChangedCallback stateChangeCallbac
             DBB_DEBUG("   [Execution] Call callback\n");
             cmdCB.second(result, res ? 1 : 0);
         }
+        DBB_DEBUG("   [Execution] exiting thread\n");
     });
 }
 
