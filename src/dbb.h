@@ -130,10 +130,11 @@ public:
 
     /* try to upgrade firmware, will require a device in DBBDeviceState::Bootloader state
      * developmentDevice      (set to true if you want to upgrade the firmware on a development device
-     * developmentSignature   (if not a nullptr, this ECDSA secp256k1 compact signature (64 bytes) will be applied
-     *                         works only on development devices)
+     * sigCreationCallback    (if developmentDevice is set, this callback can be used to provide a ECDSA
+     *                         secp256k1 compact signature (64 bytes) will be applied)
      */
-    bool upgradeFirmware(const std::string& filename, bool developmentDevice = false, std::string* developmentSignature = nullptr);
+    bool upgradeFirmware(const std::string& filename);
+    bool upgradeFirmware(const std::string& filename, bool developmentDevice, std::function<std::string(const std::vector<unsigned char>& firmwareBuffer)> sigCreationCallback);
 
     /* looks for a possible DigitalBitbox device to connect to */
     DBBDeviceState findDevice(std::string& deviceIdentifierOut);

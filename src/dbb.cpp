@@ -235,7 +235,12 @@ bool DBBDeviceManager::sendCommand(const std::string& json, const std::string& p
     return true;
 }
 
-bool DBBDeviceManager::upgradeFirmware(const std::string& filename, bool developmentDevice, std::string* developmentSignature)
+bool DBBDeviceManager::upgradeFirmware(const std::string& filename)
+{
+    upgradeFirmware(filename, false, [](const std::vector<unsigned char>& firmwareBuffer){ return std::string(); });
+}
+
+bool DBBDeviceManager::upgradeFirmware(const std::string& filename, bool developmentDevice, std::function<std::string(const std::vector<unsigned char>& firmwareBuffer)> sigCreationCallback)
 {
     // load file
     bool res = false;
@@ -268,8 +273,13 @@ bool DBBDeviceManager::upgradeFirmware(const std::string& filename, bool develop
     firmwareFile.close();
 
     // apply dummy signature
-    if (developmentDevice && developmentSignature) {
-        sigStr = *developmentSignature;
+    if (developmentDevice) {
+        // generate signature via callback
+        // we don't want the whole ECDSA codebase in this library
+        std::string possibleSigStr = sigCreationCallback(firmwareBuffer);
+        if (possibleSigStr.size() >= 64) {
+            sigStr = possibleSigStr;
+        }
     }
 
     // append 0xff to the rest of the firmware buffer
