@@ -30,11 +30,13 @@ DBBDeviceManager::~DBBDeviceManager()
 
 DBBDeviceManager::DBBDeviceManager(deviceStateChangedCallback stateChangeCallbackIn) : m_stopCheckThread(false), m_pauseCheckThread(false), m_stopExecuteThread(false), m_deviceChanged(stateChangeCallbackIn)
 {
+    DBB_DEBUG("Initialize HID communication interface\n");
     // for now, always use the HID communcation interface
     m_comInterface = std::unique_ptr<DBBCommunicationInterface>(new DBBCommunicationInterfaceHID());
 
     // dispatch the USB check thread
-    m_usbCheckThread = std::thread([&]() {
+    DBB_DEBUG("Start USB device state poll thread\n");
+    m_usbCheckThread = std::thread([this]() {
         DBBDeviceState currentDeviceState = DBBDeviceState::NoDevice;
         while (!m_stopCheckThread) {
             if (!m_pauseCheckThread) {
@@ -42,6 +44,7 @@ DBBDeviceManager::DBBDeviceManager(deviceStateChangedCallback stateChangeCallbac
                 std::string possibleDeviceIdentifier;
                 {
                     std::lock_guard<std::mutex> lock(m_comLock);
+                    DBB_DEBUG("   [Poll] poll device state\n");
                     state = m_comInterface->findDevice(possibleDeviceIdentifier);
                 }
                 if (currentDeviceState != state) {
@@ -55,26 +58,30 @@ DBBDeviceManager::DBBDeviceManager(deviceStateChangedCallback stateChangeCallbac
     });
 
     // dispatch the execution thread
-    m_usbExecuteThread = std::thread([&]() {
-
+    DBB_DEBUG("Start USB execution thread\n");
+    m_usbExecuteThread = std::thread([this]() {
         // loop unless shutdown has been requested and queue is empty
         while (!m_stopExecuteThread || m_threadQueue.size() > 0) {
             // dequeue a execution package
             commandPackage cmdCB = m_threadQueue.dequeue();
-
+            DBB_DEBUG("   [Execution] Command dequeued\n");
             std::string result;
 
             // open a connection, send command and close connection
             bool res = false;
             {
                 std::lock_guard<std::mutex> lock(m_comLock);
+                DBB_DEBUG("   [Execution] Open connection\n");
                 if (m_comInterface->openConnection(std::string())) {
+                    DBB_DEBUG("   [Execution] Send command\n");
                     res = m_comInterface->sendSynchronousJSON(cmdCB.first, result);
+                    DBB_DEBUG("   [Execution] Close connection\n");
                     m_comInterface->closeConnection();
                 }
             }
 
             // call callback with result
+            DBB_DEBUG("   [Execution] Call callback\n");
             cmdCB.second(result, res ? 1 : 0);
         }
     });
@@ -149,6 +156,7 @@ bool DBBDeviceManager::decryptPossibleCiphertext(const std::string& originalSent
             if (resultParsed.read(originalSentCommand)) {
                 UniValue password = find_value(resultParsed, "password");
                 if (password.isStr()) {
+                    DBB_DEBUG("   [Decryption] Found password command, switching decryption passphrase\n");
                     //we have change the passphrase, use the new one do decrypt
                     passphraseToDecrypt = password.get_str();
                 }
@@ -168,6 +176,7 @@ bool DBBDeviceManager::decryptPossibleCiphertext(const std::string& originalSent
 
 bool DBBDeviceManager::sendSynchronousCommand(const std::string& json, const std::string& passphrase, std::string& result, bool encrypt)
 {
+    DBB_DEBUG("Send synchronous command\n");
     std::string textToSend = json;
     if (encrypt) {
         encryptAndEncode(json, passphrase, textToSend);
@@ -175,8 +184,11 @@ bool DBBDeviceManager::sendSynchronousCommand(const std::string& json, const std
     bool res = false;
     {
         std::lock_guard<std::mutex> lock(m_comLock);
+        DBB_DEBUG("[SYNC] open connection\n");
         if (m_comInterface->openConnection(std::string())) {
+            DBB_DEBUG("[SYNC] send command\n");
             res = m_comInterface->sendSynchronousJSON(textToSend, result);
+            DBB_DEBUG("[SYNC] close connection\n");
             m_comInterface->closeConnection();
         }
     }
@@ -199,6 +211,7 @@ bool DBBDeviceManager::sendCommand(const std::string& json, const std::string& p
     if (encrypt) {
         encryptAndEncode(json, passphrase, textToSend);
     }
+    DBB_DEBUG("[sendCommand] Add command to the queue\n");
     m_threadQueue.enqueue(commandPackage(textToSend, [this, json, passphrase, callback](const std::string& result, int status) {
         // parse result and try to decrypt
         std::string valueToPass = result;
@@ -206,6 +219,7 @@ bool DBBDeviceManager::sendCommand(const std::string& json, const std::string& p
         if (decryptPossibleCiphertext(json, result, passphrase, possibleDecryptedValue)) {
             valueToPass = possibleDecryptedValue;
         }
+        DBB_DEBUG("[sendCommand] Call callback\n");
         callback(valueToPass, status);
     }));
     return true;
@@ -262,6 +276,7 @@ bool DBBDeviceManager::upgradeFirmware(const std::string& filename, bool develop
 }
 
 DBBDeviceState DBBDeviceManager::findDevice(std::string& deviceIdentifierOut) {
+    DBB_DEBUG("[findDevice] call findDevice\n");
     std::lock_guard<std::mutex> lock(m_comLock);
     return m_comInterface->findDevice(deviceIdentifierOut);
 }

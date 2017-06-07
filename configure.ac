@@ -125,6 +125,7 @@ if test "x$enable_debug" = xyes; then
     if test "x$GXX" = xyes; then
         CXXFLAGS="$CXXFLAGS -g3 -O0"
     fi
+    AC_DEFINE(ENABLE_DEBUG, 1, [Enable verbose debuggin])
 fi
 
 ERROR_CXXFLAGS=

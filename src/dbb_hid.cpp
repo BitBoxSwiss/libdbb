@@ -190,6 +190,7 @@ static int api_hid_read_frames(hid_device* hid_handle, uint32_t cid, uint8_t cmd
 bool DBBCommunicationInterfaceHID::closeConnection()
 {
     if (m_HIDHandle) {
+        DBB_DEBUG("   [HID CLOSE] closing connection\n");
         hid_close(m_HIDHandle); //vendor-id, product-id
         m_HIDHandle = nullptr;
         hid_exit();
@@ -207,11 +208,13 @@ DBBDeviceState DBBCommunicationInterfaceHID::findDevice(std::string& devicePathO
 {
     struct hid_device_info *devs, *cur_dev;
 
+    DBB_DEBUG("   [HID] call hid enumerate\n");
     devs = hid_enumerate(0x03eb, 0x2402);
 
     cur_dev = devs;
     DBBDeviceState state = DBBDeviceState::NoDevice;
     while (cur_dev) {
+        DBB_DEBUG("   [HID ENUM] found device (%d, %d)\n", cur_dev->interface_number, cur_dev->usage_page);
         if (cur_dev->interface_number == 0 || cur_dev->usage_page == 0xffff) {
             // get the manufacturer wide string
             if (!cur_dev || !cur_dev->manufacturer_string || !cur_dev->serial_number || !cur_dev->path) {
@@ -229,6 +232,7 @@ DBBDeviceState DBBCommunicationInterfaceHID::findDevice(std::string& devicePathO
 
             std::vector<std::string> vSNParts = str_split(strSN, ':');
 
+            DBB_DEBUG("   [HID ENUM] Found device with SN: %s\n", strSN.c_str());
             if ((vSNParts.size() == 2 && vSNParts[0] == "dbb.fw") || strSN == "firmware") {
                 state = DBBDeviceState::Firmware;
                 // for now, only support one digit version numbers
@@ -267,15 +271,19 @@ bool DBBCommunicationInterfaceHID::openConnectionAtPath(const std::string& devic
     if (devicePath.empty() || devicePath == "") {
         // find and select a possible device
 
+        DBB_DEBUG("   [HID OPEN CONN] no device path given, looking for device...\n");
         std::string possibleDevicePath;
         if (findDevice(possibleDevicePath) == DBBDeviceState::Firmware) {
+            DBB_DEBUG("   [HID OPEN CONN] Bitbox in firmware mode found...\n");
             pathToCheck = possibleDevicePath;
         }
     }
     if (m_HIDHandle) {
+        DBB_DEBUG("   [HID OPEN CONN] close old connection\n");
         hid_close(m_HIDHandle); //vendor-id, product-id
         m_HIDHandle = nullptr;
     }
+    DBB_DEBUG("   [HID OPEN CONN] open connection to path %s\n", pathToCheck.c_str());
     m_HIDHandle = hid_open_path(pathToCheck.c_str());
     return (m_HIDHandle != nullptr);
 }
@@ -298,8 +306,10 @@ bool DBBCommunicationInterfaceHID::sendSynchronousJSON(const std::string& json, 
     m_HIDReportBuffer[0] = 0x00;
     memcpy(m_HIDReportBuffer + reportShift, json.c_str(), std::min(HID_MAX_BUF_SIZE, (int)json.size()));
 
+    DBB_DEBUG("   [HID SEND] send frames\n");
     api_hid_send_frames(m_HIDHandle, HWW_CID, HWW_COMMAND, json.c_str(), json.size());
     memset(m_HIDReportBuffer, 0, HID_MAX_BUF_SIZE);
+    DBB_DEBUG("   [HID SEND] read frames\n");
     api_hid_read_frames(m_HIDHandle, HWW_CID, HWW_COMMAND, m_HIDReportBuffer, sizeof(m_HIDReportBuffer));
 
     result.assign((const char*)m_HIDReportBuffer);

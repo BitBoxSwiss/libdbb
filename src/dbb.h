@@ -21,6 +21,12 @@
 #define DBB_FIRMWARE_LENGTH 225280 //flash size minus bootloader length
 #define FIRMWARE_CHUNKSIZE 4096
 
+#ifdef ENABLE_DEBUG
+#define DBB_DEBUG(format, args...) printf(format, ##args);
+#else
+#define DBB_DEBUG(format, args...)
+#endif
+
 typedef std::function<void(float progress)> progressCallback;
 
 /* ENUMs for the possible device states */
@@ -83,7 +89,7 @@ private:
     std::atomic<bool> m_stopExecuteThread;
 
     /* Find device state change callback */
-    deviceStateChangedCallback m_deviceChanged;
+    const deviceStateChangedCallback m_deviceChanged;
 
     /* the command execution queue */
     SafeQueue<commandPackage> m_threadQueue;
@@ -105,6 +111,9 @@ public:
      */
     DBBDeviceManager(deviceStateChangedCallback stateChangeCallbackIn);
     ~DBBDeviceManager();
+
+    DBBDeviceManager(const DBBDeviceManager&) = delete;
+    void operator=(const DBBDeviceManager&) = delete;
 
     /* dispatch a command
      * The communication will happen on the execution thread

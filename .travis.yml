@@ -72,6 +72,7 @@ matrix:
               - gcc-4.8
               - g++-4.8
               - g++-4.8-multilib
+              - gcc-4.8-multilib
               - clang
               - libudev-dev
               - libusb-1.0-0-dev
