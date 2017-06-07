@@ -379,6 +379,7 @@ bool DBBCommunicationInterfaceHID::upgradeFirmware(const std::vector<unsigned ch
     ptr++;
     *ptr = '0';
     sendBootloaderCmd(cmd, std::vector<unsigned char>(sigCmpStr.begin(), sigCmpStr.end()), result);
+    DBB_DEBUG("   [FW] FW upgrade result: %s\n", result.c_str());
     if (result.size() < 2 || (result[0] != 's' && result[1] != '0')) {
         closeConnection();
         return false;

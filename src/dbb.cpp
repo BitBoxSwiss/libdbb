@@ -235,12 +235,12 @@ bool DBBDeviceManager::sendCommand(const std::string& json, const std::string& p
     return true;
 }
 
-bool DBBDeviceManager::upgradeFirmware(const std::string& filename)
+bool DBBDeviceManager::upgradeFirmware(const std::string& filename, progressCallback progressCB)
 {
-    upgradeFirmware(filename, false, [](const std::vector<unsigned char>& firmwareBuffer){ return std::string(); });
+    return upgradeFirmware(filename, std::move(progressCB), false, [](const std::vector<unsigned char>& firmwareBuffer){ return std::string(); });
 }
 
-bool DBBDeviceManager::upgradeFirmware(const std::string& filename, bool developmentDevice, std::function<std::string(const std::vector<unsigned char>& firmwareBuffer)> sigCreationCallback)
+bool DBBDeviceManager::upgradeFirmware(const std::string& filename, progressCallback progressCB, bool developmentDevice, std::function<std::string(const std::vector<unsigned char>& firmwareBuffer)> sigCreationCallback)
 {
     // load file
     bool res = false;
@@ -287,9 +287,7 @@ bool DBBDeviceManager::upgradeFirmware(const std::string& filename, bool develop
     {
         std::lock_guard<std::mutex> lock(m_comLock);
         m_pauseCheckThread = true;
-        res = m_comInterface->upgradeFirmware(firmwareBuffer, firmwareSize, sigStr, [](float progress) {
-            printf("Upgrade firmware: %.2f%%\n", progress);
-        });
+        res = m_comInterface->upgradeFirmware(firmwareBuffer, firmwareSize, sigStr, std::move(progressCB));
         m_pauseCheckThread = false;
     }
     return res;

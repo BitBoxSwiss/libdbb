@@ -50,8 +50,15 @@ void testDBB() {
     */
     printf("%s\n", result.c_str());
 
-    //dbb.sendCommand("{\"bootloader\" : \"unlock\"}", passphrase, result, [&](const std::string& out, int status){ printf("%s\n", out.c_str()); });
-    //dbb.upgradeFirmware("/tmp/firmware.deterministic.2.1.1.signed.bin");
+    dbb.sendCommand("{\"bootloader\" : \"unlock\"}", passphrase, result, [&](const std::string& out, int status){ printf("%s\n", out.c_str()); });
+    if (dbb.upgradeFirmware("/tmp/firmware.deterministic.2.1.1.signed.bin", [](float progress) {
+        printf("Upgrade firmware: %.2f%%\n", progress);
+    })) {
+        printf("FW Upgrade okay\n");
+    }
+    else {
+        printf("FW Upgrade failed\n");
+    }
 
     dbb.sendCommand("{\"password\" : \"jonas1\"}", passphrase, result, [](const std::string& out, int status){ printf("%s\n", out.c_str()); });
     dbb.sendCommand("{\"password\" : \"jonas\"}", "jonas1", result, [](const std::string& out, int status){ printf("%s\n", out.c_str()); });
