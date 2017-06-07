@@ -65,12 +65,13 @@ DBBDeviceManager::DBBDeviceManager(deviceStateChangedCallback stateChangeCallbac
             std::string result;
 
             // open a connection, send command and close connection
-            bool res;
+            bool res = false;
             {
                 std::lock_guard<std::mutex> lock(m_comLock);
-                m_comInterface->openConnection(std::string());
-                res = m_comInterface->sendSynchronousJSON(cmdCB.first, result);
-                m_comInterface->closeConnection();
+                if (m_comInterface->openConnection(std::string())) {
+                    res = m_comInterface->sendSynchronousJSON(cmdCB.first, result);
+                    m_comInterface->closeConnection();
+                }
             }
 
             // call callback with result
@@ -132,26 +133,78 @@ bool DBBDeviceManager::encryptAndEncode(const std::string& json, const std::stri
     return true;
 }
 
+bool DBBDeviceManager::decryptPossibleCiphertext(const std::string& originalSentCommand, const std::string& encryptedJSON, const std::string& passphrase, std::string& decryptedJsonOut)
+{
+    UniValue resultParsed;
+    if (resultParsed.read(encryptedJSON)) {
+        UniValue ctext = find_value(resultParsed, "ciphertext");
+        if (ctext.isStr()) {
+            // seems to be encrypted
+
+            /* detect a possible passphrase change leading to the fact that
+             * the decryption passphrase is different (new passphrase)
+             */
+            UniValue originalCommand;
+            std::string passphraseToDecrypt = passphrase;
+            if (resultParsed.read(originalSentCommand)) {
+                UniValue password = find_value(resultParsed, "password");
+                if (password.isStr()) {
+                    //we have change the passphrase, use the new one do decrypt
+                    passphraseToDecrypt = password.get_str();
+                }
+            }
+            if (decodeAndDecrypt(ctext.get_str(), passphraseToDecrypt, decryptedJsonOut)) {
+                memory_cleanse(&passphraseToDecrypt[0], passphraseToDecrypt.size());
+                return true;
+            }
+            else {
+                memory_cleanse(&passphraseToDecrypt[0], passphraseToDecrypt.size());
+                decryptedJsonOut.clear();
+            }
+        }
+    }
+    return false;
+}
+
+bool DBBDeviceManager::sendSynchronousCommand(const std::string& json, const std::string& passphrase, std::string& result, bool encrypt)
+{
+    std::string textToSend = json;
+    if (encrypt) {
+        encryptAndEncode(json, passphrase, textToSend);
+    }
+    bool res = false;
+    {
+        std::lock_guard<std::mutex> lock(m_comLock);
+        if (m_comInterface->openConnection(std::string())) {
+            res = m_comInterface->sendSynchronousJSON(textToSend, result);
+            m_comInterface->closeConnection();
+        }
+    }
+    if (!res) {
+        return false;
+    }
+
+    // try to decrypt
+    std::string possibleDecryptedValue;
+    if (decryptPossibleCiphertext(json, result, passphrase, possibleDecryptedValue)) {
+        result = possibleDecryptedValue;
+    }
+
+    return true;
+}
+
 bool DBBDeviceManager::sendCommand(const std::string& json, const std::string& passphrase, std::string& result, commandCallback callback, bool encrypt)
 {
     std::string textToSend = json;
     if (encrypt) {
         encryptAndEncode(json, passphrase, textToSend);
     }
-    m_threadQueue.enqueue(commandPackage(textToSend, [this, passphrase, callback](const std::string& result, int status) {
+    m_threadQueue.enqueue(commandPackage(textToSend, [this, json, passphrase, callback](const std::string& result, int status) {
         // parse result and try to decrypt
         std::string valueToPass = result;
-        UniValue resultParsed;
-        if (resultParsed.read(result)) {
-            UniValue ctext = find_value(resultParsed, "ciphertext");
-            if (ctext.isStr()) {
-                // seems to be encrypted
-                valueToPass = ctext.get_str();
-                std::string decodedAndDecrypted;
-                if (decodeAndDecrypt(valueToPass, passphrase, decodedAndDecrypted)) {
-                    valueToPass = decodedAndDecrypted;
-                }
-            }
+        std::string possibleDecryptedValue;
+        if (decryptPossibleCiphertext(json, result, passphrase, possibleDecryptedValue)) {
+            valueToPass = possibleDecryptedValue;
         }
         callback(valueToPass, status);
     }));

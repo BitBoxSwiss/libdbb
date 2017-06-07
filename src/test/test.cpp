@@ -23,25 +23,32 @@ void testDBB() {
     DBBDeviceManager dbb([](const DBBDeviceState state, const std::string pID) {
         printf("Device state: %d\n", state);
     });
-    std::string commandJson0 = "{\"led\" : \"blink\"}";
-    std::string commandJson1 = "{\"device\" : \"info\"}";
     std::string result;
     std::string passphrase = "jonas";
-    dbb.sendCommand(commandJson0, passphrase, result, [&](const std::string&, int status){ printf("TEST\n"); });
-    dbb.sendCommand(commandJson1, passphrase, result, [&](const std::string&, int status){ printf("TEST\n"); });
+    dbb.sendCommand("{\"led\" : \"blink\"}", passphrase, result, [&](const std::string& out, int status){ printf("%s\n", out.c_str()); });
+    dbb.sendCommand("{\"device\" : \"info\"}", passphrase, result, [&](const std::string& out, int status){ printf("%s\n", out.c_str()); });
 
-//    std::thread testThread = std::thread([&]() {
-//        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    std::thread testThread = std::thread([&]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
-//        dbb.sendCommand(commandJson1, passphrase, result, [&](const std::string& res, int status){ printf("TEST %s\n", res.c_str()); });
-//        dbb.sendCommand(commandJson1, passphrase, result, [&](const std::string& res, int status){ printf("TEST %s\n", res.c_str()); });
-//    });
+        dbb.sendCommand("{\"led\" : \"blink\"}", passphrase, result, [&](const std::string& res, int status){ printf("%s\n", res.c_str()); });
+        dbb.sendCommand("{\"device\" : \"info\"}", passphrase, result, [&](const std::string& res, int status){ printf("%s\n", res.c_str()); });
+    });
 
-//    testThread.join();
+    testThread.join();
 
-    std::string commandJson2 =  "{\"bootloader\" : \"unlock\"}";
-    dbb.sendCommand(commandJson2, passphrase, result, [&](const std::string&, int status){ printf("TEST\n"); });
-    dbb.upgradeFirmware("/tmp/firmware.deterministic.2.1.1.signed.bin");
+
+    if (!dbb.sendSynchronousCommand("{\"led\" : \"blink\"}", passphrase, result)) {
+        printf("Sync failed");
+    }
+    printf("%s\n", result.c_str());
+
+    //dbb.sendCommand("{\"bootloader\" : \"unlock\"}", passphrase, result, [&](const std::string& out, int status){ printf("%s\n", out.c_str()); });
+    //dbb.upgradeFirmware("/tmp/firmware.deterministic.2.1.1.signed.bin");
+
+    dbb.sendCommand("{\"password\" : \"jonas1\"}", passphrase, result, [&](const std::string& out, int status){ printf("%s\n", out.c_str()); });
+    dbb.sendCommand("{\"password\" : \"jonas\"}", "jonas1", result, [&](const std::string& out, int status){ printf("%s\n", out.c_str()); });
+    dbb.sendCommand("{\"led\" : \"blink\"}", passphrase, result, [&](const std::string& out, int status){ printf("%s\n", out.c_str()); });
 }
 
 int main() {

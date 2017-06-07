@@ -96,6 +96,8 @@ private:
 
     /* communication interface */
     std::unique_ptr<DBBCommunicationInterface> m_comInterface;
+
+    bool decryptPossibleCiphertext(const std::string& originalSentCommand, const std::string& encryptedJSON, const std::string& passphrase, std::string& decryptedJsonOut);
 public:
     /*
      * instantiate a new device interaction manager
@@ -109,6 +111,9 @@ public:
      * The callback will be called via the execution thread
      */
     bool sendCommand(const std::string& json, const std::string& passphrase, std::string& result, commandCallback callback, bool encrypt = true);
+
+    /* same as sendCommand, but executes the call in the same thread in a synchronous manner */
+    bool sendSynchronousCommand(const std::string& json, const std::string& passphrase, std::string& result, bool encrypt = true);
 
     /* try to upgrade firmware, will require a device in DBBDeviceState::Bootloader state
      * developmentDevice      (set to true if you want to upgrade the firmware on a development device

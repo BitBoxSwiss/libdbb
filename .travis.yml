@@ -11,23 +11,23 @@ matrix:
       - os: osx
         compiler: clang
         env: RUN_TESTS="yes"
-      - os: linux
-        compiler: x86_64-w64-mingw32-gcc
-        env: HOST="x86_64-w64-mingw32" CROSS_COMPILE="yes" RUN_WIN_TESTS="yes"
-        addons:
-          apt:
-            sources:
-              - ubuntu-toolchain-r-test
-            packages:
-              - gcc-4.8
-              - g++-4.8
-              - clang
-              - libudev-dev
-              - libusb-1.0-0-dev
-              - binutils-mingw-w64
-              - g++-mingw-w64-x86-64
-              - gcc-mingw-w64
-              - wine
+# - os: linux
+#   compiler: x86_64-w64-mingw32-gcc
+#   env: HOST="x86_64-w64-mingw32" CROSS_COMPILE="yes" RUN_WIN_TESTS="yes"
+#   addons:
+#     apt:
+#       sources:
+#         - ubuntu-toolchain-r-test
+#       packages:
+#         - gcc-4.8
+#         - g++-4.8
+#         - clang
+#         - libudev-dev
+#         - libusb-1.0-0-dev
+#         - binutils-mingw-w64
+#         - g++-mingw-w64-x86-64
+#         - gcc-mingw-w64
+#         - wine
       - os: linux
         compiler: gcc
         env: RUN_TESTS="yes" VALGRIND_UNIT_TESTS="yes" SUBMIT_COVERALLS="no"
@@ -44,21 +44,21 @@ matrix:
               - clang
               - libudev-dev
               - libusb-1.0-0-dev
-      - os: linux
-        compiler: arm-linux-gnueabihf-gcc
-        env: HOST="arm-linux-gnueabihf" CROSS_COMPILE="yes"
-        addons:
-          apt:
-            sources:
-              - ubuntu-toolchain-r-test
-            packages:
-              - gcc-4.8
-              - g++-4.8
-              - g++-4.8-arm-linux-gnueabihf
-              - gcc-4.8-arm-linux-gnueabihf
-              - clang
-              - libudev-dev
-              - libusb-1.0-0-dev
+# - os: linux
+#   compiler: arm-linux-gnueabihf-gcc
+#   env: HOST="arm-linux-gnueabihf" CROSS_COMPILE="yes"
+#   addons:
+#     apt:
+#       sources:
+#         - ubuntu-toolchain-r-test
+#       packages:
+#         - gcc-4.8
+#         - g++-4.8
+#         - g++-4.8-arm-linux-gnueabihf
+#         - gcc-4.8-arm-linux-gnueabihf
+#         - clang
+#         - libudev-dev
+#         - libusb-1.0-0-dev
       - os: linux
         compiler: gcc
         install:
@@ -85,9 +85,9 @@ script:
         && ./configure
         && make -j2
         ;
-      elif [ "$CROSS_COMPILE" == "yes" ]; then
+      elif [ "$BUILD32" == "yes" ]; then
         ./autogen.sh
-        && ./configure --host=$HOST
+        && ./configure --build=i686-pc-linux-gnu "CFLAGS=-m32" "CXXFLAGS=-m32" "LDFLAGS=-m32"
         && make -j2
         ;
       else
