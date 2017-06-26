@@ -135,6 +135,7 @@ public:
      */
     bool upgradeFirmware(const std::string& filename, progressCallback progressCB);
     bool upgradeFirmware(const std::string& filename, progressCallback progressCB, bool developmentDevice, std::function<std::string(const std::vector<unsigned char>& firmwareBuffer)> sigCreationCallback);
+    bool upgradeFirmware(const std::vector<unsigned char> firmwareBuffer, const size_t firmwareSize, progressCallback progressCB, bool developmentDevice, std::function<std::string(const std::vector<unsigned char>& firmwareBuffer)> sigCreationCallback);
 
     /* looks for a possible DigitalBitbox device to connect to */
     DBBDeviceState findDevice(std::string& deviceIdentifierOut);

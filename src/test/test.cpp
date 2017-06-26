@@ -20,7 +20,6 @@ void testAES() {
 }
 
 void testDBB() {
-    int i = 10;
     DBBDeviceManager dbb([](const DBBDeviceState state, const std::string pID) {
         printf("Device state: %d\n", state);
     });
@@ -51,7 +50,7 @@ void testDBB() {
     printf("%s\n", result.c_str());
 
     dbb.sendCommand("{\"bootloader\" : \"unlock\"}", passphrase, result, [&](const std::string& out, int status){ printf("%s\n", out.c_str()); });
-    if (dbb.upgradeFirmware("/tmp/firmware.deterministic.2.1.1.signed.bin", [](float progress) {
+    if (dbb.upgradeFirmware("/tmp/firmware.deterministic.2.2.2.signed.bin", [](float progress) {
         printf("Upgrade firmware: %.2f%%\n", progress);
     })) {
         printf("FW Upgrade okay\n");

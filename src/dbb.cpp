@@ -242,25 +242,20 @@ bool DBBDeviceManager::upgradeFirmware(const std::string& filename, progressCall
 
 bool DBBDeviceManager::upgradeFirmware(const std::string& filename, progressCallback progressCB, bool developmentDevice, std::function<std::string(const std::vector<unsigned char>& firmwareBuffer)> sigCreationCallback)
 {
+    // prepare the buffer
+    std::vector<unsigned char> firmwareBuffer(FIRMWARE_SIGLEN+DBB_FIRMWARE_LENGTH);
+
     // load file
     bool res = false;
     std::ifstream firmwareFile(filename, std::ios::binary | std::ios::ate);
     std::streamsize firmwareSize = firmwareFile.tellg();
-    if (firmwareSize <= 0) {
+    if (firmwareSize <= 0 || firmwareSize > FIRMWARE_SIGLEN+DBB_FIRMWARE_LENGTH) {
+        // file is empty, abort (or too large)
         return res;
     }
-    std::string sigStr;
+
+    // copy data into the buffer
     firmwareFile.seekg(0, std::ios::beg);
-
-    //read signatures
-    if (!developmentDevice) {
-        unsigned char sigByte[FIRMWARE_SIGLEN];
-        firmwareFile.read((char*)&sigByte[0], FIRMWARE_SIGLEN);
-        sigStr = HexStr(sigByte, sigByte + FIRMWARE_SIGLEN);
-    }
-
-    //read firmware
-    std::vector<unsigned char> firmwareBuffer(DBB_FIRMWARE_LENGTH);
     unsigned int pos = 0;
     while (true) {
         firmwareFile.read(reinterpret_cast<char*>(&firmwareBuffer[0] + pos), FIRMWARE_CHUNKSIZE);
@@ -272,6 +267,34 @@ bool DBBDeviceManager::upgradeFirmware(const std::string& filename, progressCall
     }
     firmwareFile.close();
 
+    // continue upgrade with buffer
+    return upgradeFirmware(firmwareBuffer, firmwareSize, progressCB, developmentDevice, std::move(sigCreationCallback));
+}
+
+bool DBBDeviceManager::upgradeFirmware(const std::vector<unsigned char> firmwareAndSigBuffer, const size_t firmwareSize, progressCallback progressCB, bool developmentDevice, std::function<std::string(const std::vector<unsigned char>& firmwareBuffer)> sigCreationCallback) {
+    std::string sigStr;
+
+    if (firmwareAndSigBuffer.size() < FIRMWARE_SIGLEN || firmwareAndSigBuffer.size() < firmwareSize) {
+        return false;
+    }
+
+    int sigOffset = 0;
+    //read signatures
+    if (!developmentDevice) {
+        unsigned char sigByte[FIRMWARE_SIGLEN];
+        memcpy(&sigByte[0], &firmwareAndSigBuffer[0], FIRMWARE_SIGLEN);
+        sigStr = HexStr(sigByte, sigByte + FIRMWARE_SIGLEN);
+        sigOffset+=FIRMWARE_SIGLEN;
+    }
+
+    //read firmware
+    std::vector<unsigned char> firmwareBuffer(DBB_FIRMWARE_LENGTH);
+    assert(firmwareSize <= DBB_FIRMWARE_LENGTH);
+    memcpy(&firmwareBuffer[0], &firmwareAndSigBuffer[sigOffset], firmwareSize-sigOffset);
+
+    // append 0xff to the rest of the firmware buffer
+    memset((void*)(&firmwareBuffer[firmwareSize-sigOffset]), 0xff, firmwareBuffer.size() - firmwareSize - sigOffset);
+
     // apply dummy signature
     if (developmentDevice) {
         // generate signature via callback
@@ -282,8 +305,7 @@ bool DBBDeviceManager::upgradeFirmware(const std::string& filename, progressCall
         }
     }
 
-    // append 0xff to the rest of the firmware buffer
-    memset((void*)(&firmwareBuffer[0] + pos), 0xff, DBB_FIRMWARE_LENGTH - pos);
+    bool res = false;
     {
         std::lock_guard<std::mutex> lock(m_comLock);
         m_pauseCheckThread = true;
