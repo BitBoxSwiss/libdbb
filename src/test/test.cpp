@@ -24,6 +24,9 @@ void testDBB() {
         printf("Device state: %d\n", state);
     });
     std::string result;
+
+    dbb.setStateChangeCallback([](const DBBDeviceState state, const std::string pID) {
+    });
     std::string passphrase = "jonas";
     dbb.sendCommand("{\"led\" : \"blink\"}", passphrase, result, [](const std::string& out, int status){ printf("%s\n", out.c_str()); });
     dbb.sendCommand("{\"device\" : \"info\"}", passphrase, result, [](const std::string& out, int status){ printf("%s\n", out.c_str()); });

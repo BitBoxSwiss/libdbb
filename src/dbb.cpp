@@ -97,6 +97,11 @@ DBBDeviceManager::DBBDeviceManager(deviceStateChangedCallback stateChangeCallbac
     });
 }
 
+void DBBDeviceManager::setStateChangeCallback(deviceStateChangedCallback stateChangeCallbackIn) {
+    std::lock_guard<std::mutex> lock(m_comLock);
+    m_deviceChanged = stateChangeCallbackIn;
+}
+
 bool DBBDeviceManager::decodeAndDecrypt(const std::string& base64Ciphertext, const std::string& passphrase, std::string& plaintextOut)
 {
     if (base64Ciphertext.empty() || passphrase.empty())

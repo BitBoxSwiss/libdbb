@@ -93,7 +93,7 @@ private:
     std::atomic<bool> m_stopExecuteThread;
 
     /* Find device state change callback */
-    const deviceStateChangedCallback m_deviceChanged;
+    deviceStateChangedCallback m_deviceChanged;
 
     /* the command execution queue */
     SafeQueue<commandPackage> m_threadQueue;
@@ -118,6 +118,10 @@ public:
 
     DBBDeviceManager(const DBBDeviceManager&) = delete;
     void operator=(const DBBDeviceManager&) = delete;
+
+    /* sets the device state change callback
+     */
+    void setStateChangeCallback(deviceStateChangedCallback stateChangeCallbackIn);
 
     /* dispatch a command
      * The communication will happen on the execution thread
