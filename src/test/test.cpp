@@ -23,21 +23,20 @@ void testDBB() {
     DBBDeviceManager dbb([](const DBBDeviceState state, const std::string pID) {
         printf("Device state: %d\n", state);
     });
-    std::string result;
 
     dbb.setStateChangeCallback([](const DBBDeviceState state, const std::string pID) {
     });
     std::string passphrase = "jonas";
-    dbb.sendCommand("{\"led\" : \"blink\"}", passphrase, result, [](const std::string& out, int status){ printf("%s\n", out.c_str()); });
-    dbb.sendCommand("{\"device\" : \"info\"}", passphrase, result, [](const std::string& out, int status){ printf("%s\n", out.c_str()); });
+    dbb.sendCommand("{\"led\" : \"blink\"}", passphrase, [](const std::string& out, int status){ printf("%s\n", out.c_str()); });
+    dbb.sendCommand("{\"device\" : \"info\"}", passphrase, [](const std::string& out, int status){ printf("%s\n", out.c_str()); });
 
     /*
     DBBDeviceManager *ptr = &dbb;
     std::thread testThread = std::thread([ptr, &passphrase, &result]() {
         std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
-        ptr->sendCommand("{\"led\" : \"blink\"}", passphrase, result, [](const std::string& res, int status){ printf("%s\n", res.c_str()); });
-        ptr->sendCommand("{\"device\" : \"info\"}", passphrase, result, [](const std::string& res, int status){ printf("%s\n", res.c_str()); });
+        ptr->sendCommand("{\"led\" : \"blink\"}", passphrase, [](const std::string& res, int status){ printf("%s\n", res.c_str()); });
+        ptr->sendCommand("{\"device\" : \"info\"}", passphrase, [](const std::string& res, int status){ printf("%s\n", res.c_str()); });
     });
 
 
@@ -49,10 +48,10 @@ void testDBB() {
     if (!dbb.sendSynchronousCommand("{\"led\" : \"blink\"}", passphrase, result)) {
         printf("Sync failed");
     }
-    */
     printf("%s\n", result.c_str());
+    */
 
-    dbb.sendCommand("{\"bootloader\" : \"unlock\"}", passphrase, result, [&](const std::string& out, int status){ printf("%s\n", out.c_str()); });
+    dbb.sendCommand("{\"bootloader\" : \"unlock\"}", passphrase, [&](const std::string& out, int status){ printf("%s\n", out.c_str()); });
     if (dbb.upgradeFirmware("/tmp/firmware.deterministic.2.2.2.signed.bin", [](float progress) {
         printf("Upgrade firmware: %.2f%%\n", progress);
     })) {
@@ -62,9 +61,9 @@ void testDBB() {
         printf("FW Upgrade failed\n");
     }
 
-    dbb.sendCommand("{\"password\" : \"jonas1\"}", passphrase, result, [](const std::string& out, int status){ printf("%s\n", out.c_str()); });
-    dbb.sendCommand("{\"password\" : \"jonas\"}", "jonas1", result, [](const std::string& out, int status){ printf("%s\n", out.c_str()); });
-    dbb.sendCommand("{\"led\" : \"blink\"}", passphrase, result, [](const std::string& out, int status){ printf("%s\n", out.c_str()); });
+    dbb.sendCommand("{\"password\" : \"jonas1\"}", passphrase, [](const std::string& out, int status){ printf("%s\n", out.c_str()); });
+    dbb.sendCommand("{\"password\" : \"jonas\"}", "jonas1", [](const std::string& out, int status){ printf("%s\n", out.c_str()); });
+    dbb.sendCommand("{\"led\" : \"blink\"}", passphrase, [](const std::string& out, int status){ printf("%s\n", out.c_str()); });
 }
 
 int main() {

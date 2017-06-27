@@ -127,7 +127,7 @@ public:
      * The communication will happen on the execution thread
      * The callback will be called via the execution thread
      */
-    bool sendCommand(const std::string& json, const std::string& passphrase, std::string& result, commandCallback callback, bool encrypt = true);
+    bool sendCommand(const std::string& json, const std::string& passphrase, commandCallback callback, bool encrypt = true);
 
     /* same as sendCommand, but executes the call in the same thread in a synchronous manner */
     bool sendSynchronousCommand(const std::string& json, const std::string& passphrase, std::string& result, bool encrypt = true);

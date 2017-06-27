@@ -220,7 +220,7 @@ bool DBBDeviceManager::sendSynchronousCommand(const std::string& json, const std
     return true;
 }
 
-bool DBBDeviceManager::sendCommand(const std::string& json, const std::string& passphrase, std::string& result, commandCallback callback, bool encrypt)
+bool DBBDeviceManager::sendCommand(const std::string& json, const std::string& passphrase, commandCallback callback, bool encrypt)
 {
     std::string textToSend = json;
     if (encrypt) {
