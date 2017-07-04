@@ -13,6 +13,7 @@
 
 #include "univalue.h"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <time.h>
@@ -102,14 +103,19 @@ void DBBDeviceManager::setStateChangeCallback(deviceStateChangedCallback stateCh
     m_deviceChanged = stateChangeCallbackIn;
 }
 
-bool DBBDeviceManager::decodeAndDecrypt(const std::string& base64Ciphertext, const std::string& passphrase, std::string& plaintextOut)
+bool DBBDeviceManager::decodeAndDecrypt(const std::string& base64Ciphertext, const std::string& passphrase, std::string& plaintextOut, bool hashPassphrase)
 {
     if (base64Ciphertext.empty() || passphrase.empty())
         return false;
 
     std::string ciphertext = DecodeBase64(base64Ciphertext);
     uint256 passphraseHash;
-    Hash256().Write((unsigned char*)passphrase.data(), passphrase.size()).Finalize(passphraseHash.begin());
+    if (hashPassphrase) {
+        Hash256().Write((unsigned char*)passphrase.data(), passphrase.size()).Finalize(passphraseHash.begin());
+    }
+    else {
+        memcpy((unsigned char*)passphraseHash.begin(), &passphrase[0], std::min(static_cast<unsigned long>(passphraseHash.size()), sizeof(passphraseHash)));
+    }
 
     plaintextOut.resize(ciphertext.size() - AES_BLOCKSIZE);
 
@@ -122,7 +128,7 @@ bool DBBDeviceManager::decodeAndDecrypt(const std::string& base64Ciphertext, con
     return (size > 0);
 }
 
-bool DBBDeviceManager::encryptAndEncode(const std::string& json, const std::string& passphrase, std::string& encodeOut)
+bool DBBDeviceManager::encryptAndEncode(const std::string& json, const std::string& passphrase, std::string& encodeOut, bool hashPassphrase)
 {
     if (passphrase.empty())
         return false;
@@ -131,7 +137,12 @@ bool DBBDeviceManager::encryptAndEncode(const std::string& json, const std::stri
     // KDF strengt doesn't matter that much because the maximal
     // amount of attempts before the device gets erases is 15
     uint256 passphraseHash;
-    Hash256().Write((unsigned char*)passphrase.data(), passphrase.size()).Finalize(passphraseHash.begin());
+    if (hashPassphrase) {
+        Hash256().Write((unsigned char*)passphrase.data(), passphrase.size()).Finalize(passphraseHash.begin());
+    }
+    else {
+        memcpy((unsigned char*)passphraseHash.begin(), &passphrase[0], std::min(static_cast<unsigned long>(passphraseHash.size()), sizeof(passphraseHash)));
+    }
 
     // create output buffer
     std::vector<unsigned char> ciphertext(json.size() + AES_BLOCKSIZE + AES_BLOCKSIZE); // ensure space for the IV

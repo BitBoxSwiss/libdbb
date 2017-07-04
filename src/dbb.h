@@ -148,12 +148,12 @@ public:
      * The given passphrase will be hashes (doubla SHA256), this is sufficient because there are max. 15 attempts
      * For offline-backups, eventually use a strong KDF for the passphrase in advance (PDKDF with >20k rounds or similar)
      */
-    bool encryptAndEncode(const std::string& json, const std::string& passphrase, std::string& base64out);
+    bool encryptAndEncode(const std::string& json, const std::string& passphrase, std::string& base64out, bool hashPassphrase = true);
 
     /* base64 decodes and AES256CBC decrypts a given string
      * The given passphrase will be hashes (doubla SHA256), this is sufficient because there are max. 15 attempts
      */
-    bool decodeAndDecrypt(const std::string& base64Ciphertext, const std::string& passphrase, std::string& encodeOut);
+    bool decodeAndDecrypt(const std::string& base64Ciphertext, const std::string& passphrase, std::string& encodeOut, bool hashPassphrase = true);
 };
 
 #endif // LIBDBB_DBB_H
